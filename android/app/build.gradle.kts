@@ -7,7 +7,9 @@ plugins {
 
 android {
     namespace = "store.voxlivre.app"
-    compileSdk = flutter.compileSdkVersion
+    // 36 : exigé par flutter_secure_storage 10 (compilation seulement ;
+    // l'app tourne toujours dès Android 7, minSdk 24).
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
