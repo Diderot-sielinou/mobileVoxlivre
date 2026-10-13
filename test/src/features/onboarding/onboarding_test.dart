@@ -22,6 +22,7 @@ void main() {
 
     expect(find.byType(OnboardingScreen), findsOneWidget);
     expect(find.text('ÉTAPE 1 SUR 3'), findsOneWidget);
+    final headerTop = tester.getTopLeft(find.text('ÉTAPE 1 SUR 3')).dy;
     expect(find.text('Importez vos PDF et cours'), findsOneWidget);
     expect(find.bySemanticsLabel('Page 1 sur 3'), findsOneWidget);
 
@@ -34,6 +35,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Hors ligne, partout'), findsOneWidget);
     expect(find.text('Passer'), findsNothing);
+    // Sans « Passer », l'en-tête ne bouge pas (vu sur le téléphone).
+    expect(tester.getTopLeft(find.text('ÉTAPE 3 SUR 3')).dy, headerTop);
 
     await tester.tap(find.text('Commencer'));
     await tester.pumpAndSettle();

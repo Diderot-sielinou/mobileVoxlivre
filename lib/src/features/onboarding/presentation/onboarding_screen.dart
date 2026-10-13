@@ -97,32 +97,37 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 VoxSpacing.sm,
                 0,
               ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: colors.accent,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: VoxSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      'ÉTAPE ${_index + 1} SUR ${_slides.length}',
-                      style: text.labelSmall?.copyWith(letterSpacing: 1.2),
-                    ),
-                  ),
-                  if (!_isLast)
-                    TextButton(
-                      onPressed: _finish,
-                      style: TextButton.styleFrom(
-                        foregroundColor: colors.textSecondary,
+              // Hauteur fixe : la ligne ne saute pas quand « Passer »
+              // disparaît sur la dernière page.
+              child: SizedBox(
+                height: VoxSizes.minTouchTarget,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: colors.accent,
+                        shape: BoxShape.circle,
                       ),
-                      child: const Text('Passer'),
                     ),
-                ],
+                    const SizedBox(width: VoxSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        'ÉTAPE ${_index + 1} SUR ${_slides.length}',
+                        style: text.labelSmall?.copyWith(letterSpacing: 1.2),
+                      ),
+                    ),
+                    if (!_isLast)
+                      TextButton(
+                        onPressed: _finish,
+                        style: TextButton.styleFrom(
+                          foregroundColor: colors.textSecondary,
+                        ),
+                        child: const Text('Passer'),
+                      ),
+                  ],
+                ),
               ),
             ),
             Expanded(
