@@ -10,12 +10,15 @@ import 'package:voxlivre/src/features/auth/application/auth_session.dart';
 import 'package:voxlivre/src/features/auth/auth_providers.dart';
 import 'package:voxlivre/src/features/auth/infrastructure/secure_session_store.dart';
 import 'package:voxlivre/src/features/auth/infrastructure/session_token_source.dart';
+import 'package:voxlivre/src/features/onboarding/infrastructure/prefs_onboarding_store.dart';
+import 'package:voxlivre/src/features/onboarding/onboarding_providers.dart';
 import 'package:voxlivre/src/shared/http/api_client.dart';
 import 'package:voxlivre/src/shared/http/http_providers.dart';
 import 'package:voxlivre/src/shared/logging/app_logging.dart';
 
-/// Démarrage : valide la configuration, lit le jeton de session (le splash
-/// natif reste affiché pendant ce temps), puis lance l'app. La session est
+/// Démarrage : valide la configuration, lit le jeton de session et la
+/// mémoire du premier lancement (le splash natif reste affiché pendant ce
+/// temps), puis lance l'app. La session est
 /// vérifiée auprès du backend **après** le premier écran (ADR-0005).
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,11 +32,16 @@ Future<void> bootstrap() async {
   };
 
   const store = SecureSessionStore();
-  final session = AuthSession(store, token: await store.read());
+  final (token, onboarding) = await (
+    store.read(),
+    PrefsOnboardingStore.open(),
+  ).wait;
+  final session = AuthSession(store, token: token);
   final container = ProviderContainer(
     overrides: [
       appConfigProvider.overrideWithValue(config),
       authSessionProvider.overrideWithValue(session),
+      onboardingStoreProvider.overrideWithValue(onboarding),
       apiClientProvider.overrideWithValue(
         ApiClient.create(
           baseUrl: config.apiBaseUrl,

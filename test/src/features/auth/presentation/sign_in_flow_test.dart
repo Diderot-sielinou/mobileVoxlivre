@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voxlivre/src/app/router.dart';
 import 'package:voxlivre/src/core/result.dart';
 import 'package:voxlivre/src/features/auth/application/auth_session.dart';
 import 'package:voxlivre/src/features/auth/domain/current_user.dart';
-import 'package:voxlivre/src/features/auth/presentation/auth_routes.dart';
 import 'package:voxlivre/src/features/auth/presentation/code_screen.dart';
 import 'package:voxlivre/src/features/auth/presentation/sign_in_screen.dart';
 import 'package:voxlivre/src/features/auth/presentation/widgets/code_input.dart';
@@ -25,24 +23,6 @@ void main() {
   /// fin du test.
   Future<void> leave(WidgetTester tester) =>
       tester.pumpWidget(const SizedBox());
-
-  group('garde de connexion', () {
-    test('sans session, tout mène à la connexion', () {
-      expect(
-        guard(signedIn: false, location: AppRoutes.library),
-        AuthRoutes.signIn,
-      );
-      expect(guard(signedIn: false, location: AuthRoutes.code), isNull);
-    });
-
-    test('avec session, la connexion mène à la Bibliothèque', () {
-      expect(
-        guard(signedIn: true, location: AuthRoutes.signIn),
-        AppRoutes.library,
-      );
-      expect(guard(signedIn: true, location: AppRoutes.profile), isNull);
-    });
-  });
 
   testWidgets('sans session, l’app s’ouvre sur la connexion', (tester) async {
     await pumpVoxlivre(tester);

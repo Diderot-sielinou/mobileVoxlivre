@@ -10,6 +10,9 @@ import 'package:voxlivre/src/features/auth/presentation/auth_routes.dart';
 import 'package:voxlivre/src/features/auth/presentation/code_screen.dart';
 import 'package:voxlivre/src/features/auth/presentation/sign_in_screen.dart';
 import 'package:voxlivre/src/features/auth/presentation/widgets/account_summary.dart';
+import 'package:voxlivre/src/features/onboarding/onboarding_providers.dart';
+import 'package:voxlivre/src/features/onboarding/presentation/onboarding_routes.dart';
+import 'package:voxlivre/src/features/onboarding/presentation/onboarding_screen.dart';
 
 /// Chemins des onglets : une constante par route, jamais de chaîne répétée.
 abstract final class AppRoutes {
@@ -19,12 +22,19 @@ abstract final class AppRoutes {
   static const profile = '/profile';
 }
 
-/// Garde de connexion (ADR-0005) : sans session, seule la connexion est
-/// ouverte ; avec une session, la connexion ramène à la Bibliothèque.
+/// Garde de connexion (ADR-0005) : au premier lancement sans session,
+/// l'onboarding ; sans session, seule la connexion est ouverte ; avec une
+/// session, connexion et onboarding ramènent à la Bibliothèque.
 @visibleForTesting
-String? guard({required bool signedIn, required String location}) {
+String? guard({
+  required bool signedIn,
+  required bool onboarded,
+  required String location,
+}) {
+  final onWelcome = location == OnboardingRoutes.welcome;
   final onSignIn = location.startsWith(AuthRoutes.signIn);
-  if (signedIn) return onSignIn ? AppRoutes.library : null;
+  if (signedIn) return onSignIn || onWelcome ? AppRoutes.library : null;
+  if (!onboarded) return onWelcome ? null : OnboardingRoutes.welcome;
   return onSignIn ? null : AuthRoutes.signIn;
 }
 
@@ -36,15 +46,23 @@ GoRoute _tab(String path, String title, [Widget? child]) => GoRoute(
 /// Routeur de l'app, rafraîchi à chaque changement de session.
 final routerProvider = Provider<GoRouter>((ref) {
   final session = ref.watch(authSessionProvider);
+  final onboarding = ref.watch(onboardingStoreProvider);
   final refresh = _StreamListenable(session.changes);
   final router = GoRouter(
     initialLocation: AppRoutes.library,
     refreshListenable: refresh,
     redirect: (context, state) => guard(
       signedIn: session.state is SignedIn,
+      onboarded: onboarding.completed,
       location: state.matchedLocation,
     ),
     routes: [
+      GoRoute(
+        path: OnboardingRoutes.welcome,
+        builder: (context, state) => OnboardingScreen(
+          onFinished: (context) => context.go(AuthRoutes.signIn),
+        ),
+      ),
       GoRoute(
         path: AuthRoutes.signIn,
         builder: (context, state) => const SignInScreen(),
