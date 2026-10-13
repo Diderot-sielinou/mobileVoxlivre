@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// Couleurs sémantiques du design system « Encre & Aurore »
@@ -174,6 +175,34 @@ class VoxColors extends ThemeExtension<VoxColors> {
       sentenceHalo: mix(sentenceHalo, other.sentenceHalo),
     );
   }
+
+  List<Color> get _all => [
+    background,
+    surface,
+    elevated,
+    border,
+    primary,
+    onPrimary,
+    accent,
+    onAccent,
+    text,
+    textSecondary,
+    success,
+    warning,
+    error,
+    wordHighlight,
+    onWordHighlight,
+    sentenceHalo,
+  ];
+
+  // Égalité par valeur : Flutter compare les thèmes pour savoir s'il doit
+  // redessiner, et les tests comparent des jeux de couleurs.
+  @override
+  bool operator ==(Object other) =>
+      other is VoxColors && listEquals(other._all, _all);
+
+  @override
+  int get hashCode => Object.hashAll(_all);
 }
 
 /// Dégradés signature (un dégradé fort par écran au maximum).

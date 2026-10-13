@@ -83,4 +83,23 @@ void main() {
       expect(s!.fontSize, greaterThanOrEqualTo(14));
     }
   });
+
+  test('copyWith ne change que le jeton demandé', () {
+    const red = Color(0xFFFF0000);
+    final changed = VoxColors.dark.copyWith(accent: red);
+    expect(changed.accent, red);
+    expect(changed.copyWith(accent: VoxColors.dark.accent), VoxColors.dark);
+    expect(VoxColors.dark.copyWith(), VoxColors.dark);
+  });
+
+  test('lerp passe d’un thème à l’autre (transition animée)', () {
+    expect(VoxColors.dark.lerp(VoxColors.paper, 0), VoxColors.dark);
+    expect(VoxColors.dark.lerp(VoxColors.paper, 1), VoxColors.paper);
+    final middle = VoxColors.dark.lerp(VoxColors.paper, 0.5);
+    expect(
+      middle.background,
+      Color.lerp(VoxColors.dark.background, VoxColors.paper.background, 0.5),
+    );
+    expect(VoxColors.dark.lerp(null, 0.5), VoxColors.dark);
+  });
 }
