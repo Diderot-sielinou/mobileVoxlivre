@@ -23,22 +23,31 @@ test/           tests (unitaires, widgets, architecture)
 android/        projet Android (identifiant store.voxlivre.app)
 docs/           ADR et guides d'ingénierie
 config/         configuration par environnement (*.json.example versionnés)
+assets/fonts/   polices embarquées (OFL) : texte lisible hors ligne
 ```
 
 ## Démarrage
 
 ```bash
-flutter pub get
-flutter run
+make hooks                                  # une fois après le clone
+cp config/dev.json.example config/dev.json  # adapter si besoin
+make get
+make run                                    # ENV=prod make run pour la production
 ```
+
+Sans `--dart-define-from-file`, l'app refuse de démarrer et dit quoi
+corriger (ADR-0003). `make check` lance ce que vérifie la CI.
 
 ## Hypothèses
 
 - Flutter 3.32 (Dart 3.8), JDK 17, SDK Android installés.
-- API locale du backend sur le port 8080 pour le développement.
+- API locale du backend sur le port 8080 pour le développement
+  (`10.0.2.2` = la machine hôte vue de l'émulateur Android).
+- Navigation : 4 onglets (Bibliothèque, Importer, Statistiques, Profil),
+  choix modifiable.
 
 ## Limites actuelles
 
-Projet en cours d'initialisation : structure, qualité et configuration
-d'abord ; les écrans viendront ensuite (maquettes Stitch dans
+Projet en cours d'initialisation : les 4 onglets affichent une page
+d'attente ; les écrans viendront ensuite (maquettes Stitch dans
 `../doc-projet/design_market_stich_voxlivre/`).
