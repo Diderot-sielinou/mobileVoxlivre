@@ -43,5 +43,20 @@ void main() {
       };
       expect(label, 'échec DOCUMENT_NOT_FOUND');
     });
+
+    test('compares by value, usable in sets and logs', () {
+      expect({ok, Result<int, Failure>.ok(int.parse('2'))}, hasLength(1));
+      expect(ok.hashCode, const Result<int, Failure>.ok(2).hashCode);
+      expect(err, const Result<int, Failure>.err(_NotFound()));
+      expect(err.hashCode, isNot(ok.hashCode));
+      expect(ok.toString(), 'Ok(2)');
+      expect(err.toString(), 'Err(_NotFound(DOCUMENT_NOT_FOUND))');
+    });
+  });
+
+  test('Failure carries no message nor details by default', () {
+    const failure = _NotFound();
+    expect(failure.message, isEmpty);
+    expect(failure.details, isEmpty);
   });
 }
