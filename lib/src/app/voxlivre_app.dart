@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxlivre/src/app/router.dart';
+import 'package:voxlivre/src/app/splash_gate.dart';
 import 'package:voxlivre/src/shared/design/vox_theme.dart';
 
 /// Racine visuelle : thèmes, langue, routeur.
@@ -24,6 +25,8 @@ class VoxlivreApp extends ConsumerWidget {
       supportedLocales: const [Locale('fr')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       routerConfig: ref.watch(routerProvider),
+      // Splash animé au-dessus du premier écran, déjà construit dessous.
+      builder: (context, child) => SplashGate(child: child!),
     );
   }
 }
