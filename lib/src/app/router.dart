@@ -10,6 +10,7 @@ import 'package:voxlivre/src/features/auth/presentation/auth_routes.dart';
 import 'package:voxlivre/src/features/auth/presentation/code_screen.dart';
 import 'package:voxlivre/src/features/auth/presentation/sign_in_screen.dart';
 import 'package:voxlivre/src/features/auth/presentation/widgets/account_summary.dart';
+import 'package:voxlivre/src/features/library/presentation/library_screen.dart';
 import 'package:voxlivre/src/features/onboarding/onboarding_providers.dart';
 import 'package:voxlivre/src/features/onboarding/presentation/onboarding_routes.dart';
 import 'package:voxlivre/src/features/onboarding/presentation/onboarding_screen.dart';
@@ -77,7 +78,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, shell) => HomeShell(shell: shell),
         branches: [
           StatefulShellBranch(
-            routes: [_tab(AppRoutes.library, 'Bibliothèque')],
+            routes: [
+              GoRoute(
+                path: AppRoutes.library,
+                builder: (context, state) => LibraryScreen(
+                  onImport: () => context.go(AppRoutes.import),
+                ),
+              ),
+            ],
           ),
           StatefulShellBranch(routes: [_tab(AppRoutes.import, 'Importer')]),
           StatefulShellBranch(routes: [_tab(AppRoutes.stats, 'Statistiques')]),

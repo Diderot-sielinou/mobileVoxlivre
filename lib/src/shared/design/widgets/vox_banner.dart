@@ -11,11 +11,16 @@ class VoxBanner extends StatelessWidget {
   const VoxBanner({
     required this.message,
     this.tone = VoxBannerTone.warning,
+    this.icon,
     super.key,
   });
 
   final String message;
   final VoxBannerTone tone;
+
+  /// Icône propre au message (nuage barré pour « hors ligne »…) ; sinon
+  /// celle de la gravité.
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -24,10 +29,12 @@ class VoxBanner extends StatelessWidget {
       VoxBannerTone.warning => colors.warning,
       VoxBannerTone.error => colors.error,
     };
-    final icon = switch (tone) {
-      VoxBannerTone.warning => Icons.shield_outlined,
-      VoxBannerTone.error => Icons.error_outline,
-    };
+    final icon =
+        this.icon ??
+        switch (tone) {
+          VoxBannerTone.warning => Icons.shield_outlined,
+          VoxBannerTone.error => Icons.error_outline,
+        };
     return Semantics(
       liveRegion: true,
       container: true,

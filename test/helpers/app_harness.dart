@@ -4,11 +4,13 @@ import 'package:voxlivre/src/app/voxlivre_app.dart';
 import 'package:voxlivre/src/core/clock.dart';
 import 'package:voxlivre/src/features/auth/application/auth_session.dart';
 import 'package:voxlivre/src/features/auth/auth_providers.dart';
+import 'package:voxlivre/src/features/library/library_providers.dart';
 import 'package:voxlivre/src/features/onboarding/domain/onboarding_store.dart';
 import 'package:voxlivre/src/features/onboarding/onboarding_providers.dart';
 import 'package:voxlivre/src/shared/time/clock_providers.dart';
 
 import '../src/features/auth/fakes.dart';
+import '../src/features/library/fakes.dart';
 
 /// Mémoire du premier lancement, en mémoire.
 final class MemoryOnboardingStore implements OnboardingStore {
@@ -40,6 +42,7 @@ typedef Harness = ({
   MemorySessionStore store,
   FixedClock clock,
   MemoryOnboardingStore onboarding,
+  FakeLibraryRepository library,
 });
 
 /// Lance l'app ; avec [token], la session est déjà ouverte ; [onboarded]
@@ -49,7 +52,10 @@ Future<Harness> pumpVoxlivre(
   String? token,
   bool onboarded = true,
   bool reduceMotion = false,
+  FakeLibraryRepository? library,
+  bool settle = true,
 }) async {
+  final shelf = library ?? FakeLibraryRepository();
   final onboarding = MemoryOnboardingStore(completed: onboarded);
   final gateway = FakeAuthGateway();
   final store = MemorySessionStore(token);
@@ -68,16 +74,23 @@ Future<Harness> pumpVoxlivre(
         authGatewayProvider.overrideWithValue(gateway),
         clockProvider.overrideWithValue(clock),
         onboardingStoreProvider.overrideWithValue(onboarding),
+        libraryRepositoryProvider.overrideWithValue(shelf),
       ],
       child: const VoxlivreApp(),
     ),
   );
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    // Le splash animé (1,35 s) passe, le reste peut encore travailler.
+    await tester.pump(const Duration(seconds: 2));
+  }
   return (
     gateway: gateway,
     session: session,
     store: store,
     clock: clock,
     onboarding: onboarding,
+    library: shelf,
   );
 }

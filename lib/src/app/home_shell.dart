@@ -24,7 +24,7 @@ class HomeShell extends StatelessWidget {
           NavigationDestination(
             icon: Icon(Icons.library_books_outlined),
             selectedIcon: Icon(Icons.library_books),
-            label: 'Bibliothèque',
+            label: 'Livres',
           ),
           NavigationDestination(
             icon: Icon(Icons.upload_file_outlined),
@@ -34,7 +34,7 @@ class HomeShell extends StatelessWidget {
           NavigationDestination(
             icon: Icon(Icons.insights_outlined),
             selectedIcon: Icon(Icons.insights),
-            label: 'Statistiques',
+            label: 'Stats',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),

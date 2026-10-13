@@ -22,7 +22,14 @@ void main() {
     tester,
   ) async {
     await pumpApp(tester);
-    for (final tab in ['Importer', 'Statistiques', 'Profil', 'Bibliothèque']) {
+    // Libellé court de l'onglet → titre de l'écran.
+    const tabs = {
+      'Importer': 'Importer',
+      'Stats': 'Statistiques',
+      'Profil': 'Profil',
+      'Livres': 'Bibliothèque',
+    };
+    for (final MapEntry(key: tab, value: title) in tabs.entries) {
       await tester.tap(
         find.descendant(
           of: find.byType(NavigationBar),
@@ -30,7 +37,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.widgetWithText(AppBar, tab), findsOneWidget, reason: tab);
+      expect(find.widgetWithText(AppBar, title), findsOneWidget, reason: tab);
     }
   });
 

@@ -4,12 +4,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxlivre/src/app/app_config.dart';
+import 'package:voxlivre/src/app/session_effects.dart';
 import 'package:voxlivre/src/app/voxlivre_app.dart';
 import 'package:voxlivre/src/core/result.dart';
 import 'package:voxlivre/src/features/auth/application/auth_session.dart';
 import 'package:voxlivre/src/features/auth/auth_providers.dart';
 import 'package:voxlivre/src/features/auth/infrastructure/secure_session_store.dart';
 import 'package:voxlivre/src/features/auth/infrastructure/session_token_source.dart';
+import 'package:voxlivre/src/features/library/library_providers.dart';
 import 'package:voxlivre/src/features/onboarding/infrastructure/prefs_onboarding_store.dart';
 import 'package:voxlivre/src/features/onboarding/onboarding_providers.dart';
 import 'package:voxlivre/src/shared/http/api_client.dart';
@@ -50,6 +52,7 @@ Future<void> bootstrap() async {
       ),
     ],
   );
+  clearAccountDataOnSignOut(session, container.read(clearLibraryProvider));
   unawaited(container.read(restoreSessionProvider)());
 
   runApp(
