@@ -23,11 +23,15 @@ const _technicalPackages = [
   'dart:ui',
 ];
 
+/// Fichier à la racine d'une fonctionnalité (`<f>_providers.dart`) : il relie
+/// les ports à leurs adaptateurs (ADR-0002).
+const _composition = 'composition';
+
 /// Couches interdites, par couche importatrice (ADR-0001, tableau).
-const _forbiddenLayers = {
-  'domain': ['application', 'infrastructure', 'presentation'],
-  'application': ['infrastructure', 'presentation'],
-  'infrastructure': ['presentation'],
+const Map<String, List<String>> _forbiddenLayers = {
+  'domain': ['application', 'infrastructure', 'presentation', _composition],
+  'application': ['infrastructure', 'presentation', _composition],
+  'infrastructure': ['presentation', _composition],
   'presentation': ['infrastructure'],
 };
 
@@ -46,6 +50,7 @@ _Location? _locate(String pathInSrc) {
   if (parts.isEmpty) return null;
   if (parts.first != 'features') return _Location(parts.first, null, null);
   if (parts.length < 3) return null;
+  if (parts.length == 3) return _Location('features', parts[1], _composition);
   return _Location('features', parts[1], parts[2]);
 }
 
@@ -181,6 +186,26 @@ void main() {
         expect(violations(root.path), hasLength(2));
       },
     );
+
+    test('le fichier de composition importé hors de presentation', () {
+      write(
+        'features/player/application/play.dart',
+        "import '../player_providers.dart';",
+      );
+      write(
+        'features/player/presentation/screen.dart',
+        "import '../player_providers.dart';",
+      );
+      write(
+        'features/player/player_providers.dart',
+        "import 'infrastructure/audio.dart';\nimport 'application/play.dart';",
+      );
+      write('features/player/infrastructure/audio.dart', '');
+
+      expect(violations(root.path), [
+        contains('application/play.dart importe ../player_providers.dart'),
+      ]);
+    });
 
     test('rien pour des imports autorisés', () {
       write(
