@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxlivre/src/features/auth/application/auth_session.dart';
 import 'package:voxlivre/src/features/auth/application/request_code.dart';
@@ -17,10 +19,18 @@ final authSessionProvider = Provider<AuthSession>(
 );
 
 /// État de la session : l'état courant, puis chaque changement.
-final sessionStateProvider = StreamProvider<SessionState>((ref) async* {
+final sessionStateProvider = StreamProvider<SessionState>((ref) {
   final session = ref.watch(authSessionProvider);
-  yield session.state;
-  yield* session.changes;
+  // Abonné aux changements avant de rendre l'état courant : un `async*`
+  // s'abonnerait après le premier `yield` et pourrait manquer un changement.
+  final controller = StreamController<SessionState>();
+  final changes = session.changes.listen(controller.add);
+  controller.add(session.state);
+  ref.onDispose(() {
+    unawaited(changes.cancel());
+    unawaited(controller.close());
+  });
+  return controller.stream;
 });
 
 final authGatewayProvider = Provider<AuthGateway>(
