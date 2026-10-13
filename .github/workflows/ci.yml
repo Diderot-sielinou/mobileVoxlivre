@@ -1,0 +1,88 @@
+# CI de l'app mobile — garde-fou serveur des règles d'AGENTS.md.
+#
+# Les hooks (tool/hooks) vérifient la même chose en local, mais `--no-verify`
+# les contourne : ici, rien ne se contourne. Mêmes cibles que `make check`.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: voxlivre-mobile-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+env:
+  # Même version qu'en local (README, Hypothèses) : une montée de Flutter est
+  # un commit à part, pas une surprise de la CI.
+  FLUTTER_VERSION: 3.32.4
+
+jobs:
+  analyze:
+    name: Format & analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - run: make format-check
+      - run: make analyze
+
+  test:
+    name: Tests (coverage gate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      # Tests unitaires, widgets et architecture (règle des dépendances).
+      - run: make test
+      - run: make coverage-gate
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage/lcov.info
+          retention-days: 14
+
+  build:
+    name: Build APK (debug)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      # Prouve que le projet Android compile. Configuration de production
+      # publique (URL de l'API) ; la signature de publication viendra avec
+      # la mise sur le Play Store.
+      - run: cp config/prod.json.example config/prod.json
+      - run: flutter build apk --debug --dart-define-from-file=config/prod.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: voxlivre-debug-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7
