@@ -19,3 +19,21 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Polices embarquées (licence OFL, textes dans assets/fonts/) : aucune
+  # requête réseau pour afficher du texte, l'app reste lisible hors ligne.
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-400.ttf
+        - asset: assets/fonts/PlusJakartaSans-500.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-600.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-700.ttf
+          weight: 700
+    - family: AtkinsonHyperlegible
+      fonts:
+        - asset: assets/fonts/AtkinsonHyperlegible-400.ttf
+        - asset: assets/fonts/AtkinsonHyperlegible-700.ttf
+          weight: 700
