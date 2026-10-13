@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Avant chaque commit : format et analyse (comme lint-staged + typecheck côté backend).
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+staged=$(git diff --cached --name-only --diff-filter=ACM -- '*.dart')
+if [ -n "$staged" ]; then
+  # shellcheck disable=SC2086 # liste de fichiers séparés par des espaces, voulue
+  dart format --set-exit-if-changed $staged >/dev/null || {
+    echo "pre-commit : fichiers non formatés. Lancez : make format" >&2
+    exit 1
+  }
+fi
+flutter analyze --fatal-infos --no-pub >/dev/null || {
+  echo "pre-commit : l'analyse signale des problèmes. Lancez : make analyze" >&2
+  exit 1
+}

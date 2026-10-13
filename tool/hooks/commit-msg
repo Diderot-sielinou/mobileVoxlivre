@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Conventional Commits avec scope obligatoire, en-tête ≤ 100 caractères
+# (même règle que commitlint côté backend).
+set -euo pipefail
+header=$(head -n1 "$1")
+pattern='^(feat|fix|chore|docs|refactor|test|ci|perf|build|style|revert)\([a-z0-9-]+\)!?: .+'
+if ! [[ "$header" =~ $pattern ]]; then
+  echo "commit-msg : « type(scope): sujet » attendu, ex. feat(player): …" >&2
+  exit 1
+fi
+if [ "${#header}" -gt 100 ]; then
+  echo "commit-msg : en-tête de ${#header} caractères (100 au plus)" >&2
+  exit 1
+fi

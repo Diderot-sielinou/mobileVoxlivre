@@ -1,1 +1,22 @@
-include: package:flutter_lints/flutter.yaml
+# Lint strict (very_good_analysis), 0 avertissement toléré : la CI et le
+# hook pre-commit lancent `flutter analyze --fatal-infos`.
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    # Code généré (freezed, json_serializable, drift) : pas de lint dessus.
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+
+linter:
+  rules:
+    # L'app n'est pas une bibliothèque publiée : la doc des API publiques
+    # n'est pas exigée partout (elle l'est par les revues pour domain/ et core/).
+    public_member_api_docs: false
+    # Un port hexagonal à une seule méthode (`Clock.now`) est légitime : c'est
+    # un point de remplacement pour les tests, pas une fonction déguisée.
+    one_member_abstracts: false
