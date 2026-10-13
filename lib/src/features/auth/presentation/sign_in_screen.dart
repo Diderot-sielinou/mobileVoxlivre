@@ -68,6 +68,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             children: [
               const _Wordmark(),
               const SizedBox(height: VoxSpacing.xl),
+              const _Badge(),
+              const SizedBox(height: VoxSpacing.md),
               Text('Bienvenue sur Voxlivre', style: text.headlineLarge),
               const SizedBox(height: VoxSpacing.sm),
               Text(
@@ -174,6 +176,51 @@ class _Wordmark extends StatelessWidget {
   }
 }
 
+/// « Audio-lecture augmentée » : ce que fait l'app, en un coup d'œil.
+class _Badge extends StatelessWidget {
+  const _Badge();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vox;
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: VoxSpacing.sm + VoxSpacing.xs,
+          vertical: VoxSpacing.xs + 2,
+        ),
+        decoration: BoxDecoration(
+          color: colors.accent.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(VoxRadius.chip),
+          border: Border.all(color: colors.accent.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: colors.accent,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: VoxSpacing.sm),
+            Text(
+              'AUDIO-LECTURE AUGMENTÉE',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.accent,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _PhoneField extends StatelessWidget {
   const _PhoneField({
     required this.controller,
@@ -189,6 +236,26 @@ class _PhoneField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final accent = context.vox.accent;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Seuls les mobiles camerounais sont acceptés (backend, ADR-0017).
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Icon(Icons.place_outlined, size: 18, color: accent),
+            const SizedBox(width: VoxSpacing.xs),
+            Text('Cameroun', style: text.labelMedium?.copyWith(color: accent)),
+          ],
+        ),
+        const SizedBox(height: VoxSpacing.sm),
+        _phoneInput(text),
+      ],
+    );
+  }
+
+  Widget _phoneInput(TextTheme text) {
     return TextField(
       controller: controller,
       keyboardType: TextInputType.phone,

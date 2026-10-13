@@ -29,6 +29,8 @@ void main() {
 
     expect(find.byType(SignInScreen), findsOneWidget);
     expect(find.text('Bienvenue sur Voxlivre'), findsOneWidget);
+    expect(find.text('AUDIO-LECTURE AUGMENTÉE'), findsOneWidget);
+    expect(find.text('Cameroun'), findsOneWidget);
     expect(
       find.text('Orange ou MTN, 9 chiffres commençant par 6'),
       findsOneWidget,
