@@ -1,6 +1,15 @@
+import 'dart:async';
+
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:voxlivre/src/app/home_shell.dart';
+import 'package:voxlivre/src/features/auth/application/auth_session.dart';
+import 'package:voxlivre/src/features/auth/auth_providers.dart';
+import 'package:voxlivre/src/features/auth/presentation/auth_routes.dart';
+import 'package:voxlivre/src/features/auth/presentation/code_screen.dart';
+import 'package:voxlivre/src/features/auth/presentation/sign_in_screen.dart';
+import 'package:voxlivre/src/features/auth/presentation/widgets/account_summary.dart';
 
 /// Chemins des onglets : une constante par route, jamais de chaîne répétée.
 abstract final class AppRoutes {
@@ -10,17 +19,42 @@ abstract final class AppRoutes {
   static const profile = '/profile';
 }
 
-GoRoute _tab(String path, String title) => GoRoute(
+/// Garde de connexion (ADR-0005) : sans session, seule la connexion est
+/// ouverte ; avec une session, la connexion ramène à la Bibliothèque.
+@visibleForTesting
+String? guard({required bool signedIn, required String location}) {
+  final onSignIn = location.startsWith(AuthRoutes.signIn);
+  if (signedIn) return onSignIn ? AppRoutes.library : null;
+  return onSignIn ? null : AuthRoutes.signIn;
+}
+
+GoRoute _tab(String path, String title, [Widget? child]) => GoRoute(
   path: path,
-  builder: (context, state) => PlaceholderPage(title: title),
+  builder: (context, state) => PlaceholderPage(title: title, child: child),
 );
 
-/// Routeur de l'app. Les écrans des fonctionnalités et la garde de connexion
-/// (`redirect`) s'y ajoutent avec leurs étapes.
+/// Routeur de l'app, rafraîchi à chaque changement de session.
 final routerProvider = Provider<GoRouter>((ref) {
+  final session = ref.watch(authSessionProvider);
+  final refresh = _StreamListenable(session.changes);
   final router = GoRouter(
     initialLocation: AppRoutes.library,
+    refreshListenable: refresh,
+    redirect: (context, state) => guard(
+      signedIn: session.state is SignedIn,
+      location: state.matchedLocation,
+    ),
     routes: [
+      GoRoute(
+        path: AuthRoutes.signIn,
+        builder: (context, state) => const SignInScreen(),
+        routes: [
+          GoRoute(
+            path: 'code',
+            builder: (context, state) => const CodeScreen(),
+          ),
+        ],
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => HomeShell(shell: shell),
         branches: [
@@ -29,11 +63,33 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           StatefulShellBranch(routes: [_tab(AppRoutes.import, 'Importer')]),
           StatefulShellBranch(routes: [_tab(AppRoutes.stats, 'Statistiques')]),
-          StatefulShellBranch(routes: [_tab(AppRoutes.profile, 'Profil')]),
+          StatefulShellBranch(
+            routes: [
+              _tab(AppRoutes.profile, 'Profil', const AccountSummary()),
+            ],
+          ),
         ],
       ),
     ],
   );
-  ref.onDispose(router.dispose);
+  ref.onDispose(() {
+    router.dispose();
+    refresh.dispose();
+  });
   return router;
 });
+
+/// Prévient go_router à chaque évènement du flux reçu.
+class _StreamListenable extends ChangeNotifier {
+  _StreamListenable(Stream<Object?> stream) {
+    _subscription = stream.listen((_) => notifyListeners());
+  }
+
+  late final StreamSubscription<Object?> _subscription;
+
+  @override
+  void dispose() {
+    unawaited(_subscription.cancel());
+    super.dispose();
+  }
+}

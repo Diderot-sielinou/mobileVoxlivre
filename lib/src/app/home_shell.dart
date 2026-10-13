@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:voxlivre/src/shared/design/vox_tokens.dart';
 
 /// Coquille des 4 onglets : la barre du bas reste, chaque onglet garde sa pile
 /// de navigation et son défilement quand on en change.
@@ -46,19 +47,29 @@ class HomeShell extends StatelessWidget {
   }
 }
 
-/// Page d'attente d'un onglet, remplacée par l'écran de sa fonctionnalité.
+/// Page d'attente d'un onglet, remplacée par l'écran de sa fonctionnalité ;
+/// [child] montre ce qui existe déjà (ex. la déconnexion dans Profil).
 class PlaceholderPage extends StatelessWidget {
-  const PlaceholderPage({required this.title, super.key});
+  const PlaceholderPage({required this.title, this.child, super.key});
 
   final String title;
+  final Widget? child;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Text('À venir', style: Theme.of(context).textTheme.bodyLarge),
-      ),
+      body: child == null
+          ? Center(
+              child: Text(
+                'À venir',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+            )
+          : ListView(
+              padding: const EdgeInsets.all(VoxSpacing.screenMargin),
+              children: [child!],
+            ),
     );
   }
 }

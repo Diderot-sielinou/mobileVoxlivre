@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:voxlivre/src/app/voxlivre_app.dart';
+
+import '../../helpers/app_harness.dart';
 
 void main() {
-  Future<void> pumpApp(WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: VoxlivreApp()));
-    await tester.pumpAndSettle();
-  }
+  // Session ouverte : l'app s'ouvre sur les onglets.
+  Future<void> pumpApp(WidgetTester tester) =>
+      pumpVoxlivre(tester, token: 'jeton');
 
   testWidgets('démarre sur la Bibliothèque, en sombre et en français', (
     tester,
