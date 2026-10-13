@@ -4,25 +4,31 @@ import 'package:dio/dio.dart';
 import 'package:logging/logging.dart';
 import 'package:voxlivre/src/core/result.dart';
 import 'package:voxlivre/src/shared/http/api_failure.dart';
+import 'package:voxlivre/src/shared/http/api_response.dart';
+import 'package:voxlivre/src/shared/http/auth_token_source.dart';
 import 'package:voxlivre/src/shared/http/request_id.dart';
 
-/// Transforme le JSON d'une réponse réussie en valeur ; peut lever une
-/// erreur de type si la forme n'est pas celle attendue (→
-/// [ApiFailure.unexpectedResponse]).
-typedef Decode<T> = T Function(Object? json);
+/// Transforme une réponse réussie en valeur ; peut lever une erreur de type
+/// si la forme n'est pas celle attendue (→ [ApiFailure.unexpectedResponse]).
+typedef Decode<T> = T Function(ApiResponse response);
 
 /// Seul point d'accès à `voxlivre-api` (ADR-0004).
 ///
 /// Chaque appel renvoie un [Result] : aucune exception n'en sort, et dio
 /// n'est connu que de `shared/http/`. Chaque requête porte un `x-request-id`
-/// neuf, repris dans l'[ApiFailure] et dans le journal.
+/// neuf, repris dans l'[ApiFailure] et dans le journal ; avec une session,
+/// elle porte aussi le jeton de [AuthTokenSource] (ADR-0005).
 final class ApiClient {
   /// Client au-dessus de `dio` ; [requestId] est remplaçable pour les tests.
-  ApiClient(this._dio, {String Function()? requestId})
-    : _requestId = requestId ?? newRequestId;
+  ApiClient(this._dio, {AuthTokenSource? tokens, String Function()? requestId})
+    : _tokens = tokens,
+      _requestId = requestId ?? newRequestId;
 
   /// Client de l'app pour l'API située à [baseUrl].
-  factory ApiClient.create({required Uri baseUrl}) => ApiClient(
+  factory ApiClient.create({
+    required Uri baseUrl,
+    AuthTokenSource? tokens,
+  }) => ApiClient(
     Dio(
       BaseOptions(
         baseUrl: baseUrl.toString(),
@@ -34,9 +40,11 @@ final class ApiClient {
         headers: {'accept': 'application/json'},
       ),
     ),
+    tokens: tokens,
   );
 
   final Dio _dio;
+  final AuthTokenSource? _tokens;
   final String Function() _requestId;
   static final _log = Logger('http');
 
@@ -98,6 +106,7 @@ final class ApiClient {
     Object? body,
     Map<String, Object?>? query,
   ) async {
+    final token = _tokens?.token;
     try {
       final response = await _dio.request<String>(
         path,
@@ -105,7 +114,10 @@ final class ApiClient {
         queryParameters: query,
         options: Options(
           method: method,
-          headers: {'x-request-id': requestId},
+          headers: {
+            'x-request-id': requestId,
+            if (token != null) 'authorization': 'Bearer $token',
+          },
           // Le corps est lu en texte puis décodé ici : un corps non JSON
           // devient un échec, jamais une exception.
           responseType: ResponseType.plain,
@@ -113,6 +125,11 @@ final class ApiClient {
           validateStatus: (_) => true,
         ),
       );
+      // Jeton refusé : session expirée ou supprimée ailleurs. Sans jeton, un
+      // 401 n'est qu'une réponse (connexion requise).
+      if (response.statusCode == 401 && token != null) {
+        _tokens?.onUnauthorized();
+      }
       return _read(response, decode, requestId);
     } on DioException catch (e) {
       return Result.err(_withoutResponse(e, requestId));
@@ -129,7 +146,9 @@ final class ApiClient {
       return Result.err(_problem(status, response.data, requestId));
     }
     try {
-      return Result.ok(decode(_parse(response.data)));
+      return Result.ok(
+        decode(ApiResponse(_parse(response.data), response.headers.map)),
+      );
       // Corps non JSON (FormatException) ou forme qui ne colle pas au
       // décodeur (erreur de type) : réponse inattendue, pas un plantage.
       // ignore: avoid_catches_without_on_clauses
@@ -150,7 +169,8 @@ final class ApiClient {
       body == null || body.isEmpty ? null : jsonDecode(body);
 
   /// Problem Details (RFC 7807) → [ApiFailure] ; un corps qui n'en est pas
-  /// un (page HTML d'un proxy) garde le code déduit du statut.
+  /// un (page HTML d'un proxy) garde le code déduit du statut. Les routes
+  /// better-auth répondent `{ message, code }` : `message` remplace `detail`.
   static ApiFailure _problem(int status, String? body, String requestId) {
     Object? json;
     try {
@@ -162,7 +182,7 @@ final class ApiClient {
         ? json
         : const <String, Object?>{};
     final code = problem['code'];
-    final detail = problem['detail'];
+    final detail = problem['detail'] ?? problem['message'];
     final details = problem['details'];
     return ApiFailure(
       code is String && code.isNotEmpty

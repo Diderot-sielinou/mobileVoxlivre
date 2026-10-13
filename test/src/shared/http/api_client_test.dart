@@ -7,6 +7,7 @@ import 'package:logging/logging.dart';
 import 'package:voxlivre/src/core/result.dart';
 import 'package:voxlivre/src/shared/http/api_client.dart';
 import 'package:voxlivre/src/shared/http/api_failure.dart';
+import 'package:voxlivre/src/shared/http/auth_token_source.dart';
 
 /// Faux réseau : répond par [respond] et garde la dernière requête.
 class _FakeAdapter implements HttpClientAdapter {
@@ -36,14 +37,27 @@ const Map<String, List<String>> _json = {
 ResponseBody _body(String body, int status) =>
     ResponseBody.fromString(body, status, headers: _json);
 
+/// Session de test : jeton fixe, compte les refus.
+class _Tokens implements AuthTokenSource {
+  _Tokens(this.token);
+
+  @override
+  String? token;
+  int rejections = 0;
+
+  @override
+  void onUnauthorized() => rejections++;
+}
+
 ({ApiClient client, _FakeAdapter adapter}) _client(
-  Future<ResponseBody> Function(RequestOptions options) respond,
-) {
+  Future<ResponseBody> Function(RequestOptions options) respond, {
+  AuthTokenSource? tokens,
+}) {
   final adapter = _FakeAdapter(respond);
   final dio = Dio(BaseOptions(baseUrl: 'https://api.test'))
     ..httpClientAdapter = adapter;
   return (
-    client: ApiClient(dio, requestId: () => 'req-1'),
+    client: ApiClient(dio, tokens: tokens, requestId: () => 'req-1'),
     adapter: adapter,
   );
 }
@@ -64,7 +78,7 @@ void main() {
 
       final result = await client.get(
         '/health',
-        decode: (json) => _map(json)['status']! as String,
+        decode: (r) => _map(r.json)['status']! as String,
         query: {'page': 2},
       );
 
@@ -96,7 +110,7 @@ void main() {
         (_) async => ResponseBody.fromString('', 204),
       );
 
-      final result = await client.delete('/a', decode: (json) => json);
+      final result = await client.delete('/a', decode: (r) => r.json);
 
       expect(result, const Result<Object?, ApiFailure>.ok(null));
     });
@@ -119,7 +133,7 @@ void main() {
         ),
       );
 
-      final failure = _failure(await client.get('/a', decode: (j) => j));
+      final failure = _failure(await client.get('/a', decode: (r) => r.json));
 
       expect(failure.code, 'QUOTA_EXCEEDED');
       expect(failure.status, 402);
@@ -133,7 +147,9 @@ void main() {
         (_) async => _body('{"status":401,"detail":"Unauthorized"}', 401),
       );
 
-      final failure = _failure(await client.get('/v1/me', decode: (j) => j));
+      final failure = _failure(
+        await client.get('/v1/me', decode: (r) => r.json),
+      );
 
       expect(failure.code, 'UNAUTHORIZED');
       expect(failure.details, isEmpty);
@@ -144,7 +160,7 @@ void main() {
         (_) async => ResponseBody.fromString('<html>Bad Gateway</html>', 502),
       );
 
-      final failure = _failure(await client.get('/a', decode: (j) => j));
+      final failure = _failure(await client.get('/a', decode: (r) => r.json));
 
       expect(failure.code, 'SERVER_ERROR');
       expect(failure.status, 502);
@@ -179,7 +195,7 @@ void main() {
         (_) async => ResponseBody.fromString('<html></html>', 200),
       );
 
-      final failure = _failure(await client.get('/a', decode: (j) => j));
+      final failure = _failure(await client.get('/a', decode: (r) => r.json));
 
       expect(failure.code, ApiFailure.unexpectedResponse);
       expect(failure.status, 200);
@@ -189,7 +205,7 @@ void main() {
       final (:client, adapter: _) = _client((_) async => _body('[1, 2]', 200));
 
       final failure = _failure(
-        await client.get('/a', decode: (json) => _map(json)['id']! as String),
+        await client.get('/a', decode: (r) => _map(r.json)['id']! as String),
       );
 
       expect(failure.code, ApiFailure.unexpectedResponse);
@@ -203,7 +219,7 @@ void main() {
           DioException(requestOptions: options, type: type),
         ),
       );
-      return _failure(await client.get('/a', decode: (j) => j));
+      return _failure(await client.get('/a', decode: (r) => r.json));
     }
 
     test('les délais dépassés donnent TIMEOUT', () async {
@@ -232,6 +248,72 @@ void main() {
     });
   });
 
+  group('session (ADR-0005)', () {
+    test('le jeton part en bearer ; sans jeton, aucun en-tête', () async {
+      final tokens = _Tokens('jeton-1');
+      final (:client, :adapter) = _client(
+        (_) async => _body('{}', 200),
+        tokens: tokens,
+      );
+
+      await client.get('/v1/me', decode: (r) => r.json);
+      expect(adapter.last!.headers['authorization'], 'Bearer jeton-1');
+
+      tokens.token = null;
+      await client.get('/v1/me', decode: (r) => r.json);
+      expect(adapter.last!.headers.containsKey('authorization'), isFalse);
+    });
+
+    test('un 401 avec jeton prévient la session, sans jeton non', () async {
+      final tokens = _Tokens('jeton-1');
+      final (:client, adapter: _) = _client(
+        (_) async => _body('{"code":"UNAUTHORIZED"}', 401),
+        tokens: tokens,
+      );
+
+      await client.get('/v1/me', decode: (r) => r.json);
+      expect(tokens.rejections, 1);
+
+      tokens.token = null;
+      await client.get('/v1/me', decode: (r) => r.json);
+      expect(tokens.rejections, 1);
+    });
+
+    test('le décodeur lit un en-tête de réponse', () async {
+      final (:client, adapter: _) = _client(
+        (_) async => ResponseBody.fromString(
+          '{"token":"brut"}',
+          200,
+          headers: {
+            ..._json,
+            'set-auth-token': ['signé'],
+          },
+        ),
+      );
+
+      final result = await client.post(
+        '/api/auth/sign-in/email-otp',
+        decode: (r) => r.header('Set-Auth-Token'),
+      );
+
+      expect(result, const Result<String?, ApiFailure>.ok('signé'));
+    });
+
+    test('une erreur better-auth donne son code et son message', () async {
+      final (:client, adapter: _) = _client(
+        (_) async =>
+            _body('{"message":"Invalid OTP","code":"INVALID_OTP"}', 400),
+      );
+
+      final failure = _failure(
+        await client.post('/api/auth/sign-in/email-otp', decode: (r) => r.json),
+      );
+
+      expect(failure.code, 'INVALID_OTP');
+      expect(failure.message, 'Invalid OTP');
+    });
+  });
+
   test('le journal ne contient ni paramètres ni corps', () async {
     final (:client, adapter: _) = _client(
       (_) async => _body('{"secret":"corps"}', 200),
@@ -245,9 +327,9 @@ void main() {
     await client.post(
       '/v1/auth',
       body: {'phone': '+237600000000'},
-      decode: (j) => j,
+      decode: (r) => r.json,
     );
-    await client.get('/v1/x', query: {'email': 'a@b.c'}, decode: (j) => j);
+    await client.get('/v1/x', query: {'email': 'a@b.c'}, decode: (r) => r.json);
 
     expect(lines, hasLength(2));
     expect(lines.first, startsWith('POST /v1/auth → ok ('));
