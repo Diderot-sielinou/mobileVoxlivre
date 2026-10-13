@@ -7,16 +7,16 @@ name: CI
 
 on:
   pull_request:
-    branches: [master]
+    branches: [main]
   push:
-    branches: [master]
+    branches: [main]
 
 permissions:
   contents: read
 
 concurrency:
   group: voxlivre-mobile-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   # Même version qu'en local (README, Hypothèses) : une montée de Flutter est
