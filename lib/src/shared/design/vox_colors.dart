@@ -219,6 +219,12 @@ abstract final class VoxGradients {
     colors: [Color(0xFFF59E0B), Color(0xFFF97316)],
   );
 
+  /// Texte posé sur « Braise » (contraste AA vérifié sur les deux teintes).
+  static const onBraise = Color(0xFF1A1205);
+
+  /// Texte posé sur « Aube ».
+  static const onAube = Color(0xFFFFFFFF);
+
   /// Nuit : fond du lecteur plein écran.
   static const nuit = RadialGradient(
     center: Alignment(0, -0.6),

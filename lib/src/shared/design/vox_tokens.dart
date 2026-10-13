@@ -41,6 +41,12 @@ abstract final class VoxSizes {
 
   /// Taille de texte minimale d'une information.
   static const minTextSize = 14.0;
+
+  /// Hauteur du bouton d'action principal.
+  static const primaryButtonHeight = 52.0;
+
+  /// Côté maximal d'une case du code de connexion.
+  static const codeBox = 52.0;
 }
 
 /// Durées d'animation : la sortie est plus rapide que l'entrée.
@@ -56,4 +62,16 @@ abstract final class VoxMotion {
 
   /// Fermeture d'une feuille.
   static const sheetOut = Duration(milliseconds: 200);
+
+  /// Rebond d'une case du code qui se remplit.
+  static const codeFill = Duration(milliseconds: 150);
+
+  /// Secousse d'un code refusé.
+  static const codeShake = Duration(milliseconds: 300);
+
+  /// Changement de page (onboarding), points de page.
+  static const page = Duration(milliseconds: 300);
+
+  /// Bascule entre deux contenus (champ téléphone / e-mail, bandeau).
+  static const swap = Duration(milliseconds: 200);
 }
