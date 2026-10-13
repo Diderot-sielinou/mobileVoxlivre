@@ -22,7 +22,8 @@ client, sinon il en génère un. Réseau visé : lent, coupé souvent, data chè
 - **`ApiFailure`** (sous-classe de `Failure`) : `status`, `code`, `details`,
   `requestId`. Le `code` est toujours présent :
   - celui du Problem Details quand le backend en donne un ;
-  - sinon déduit du statut : 400 `BAD_REQUEST`, 401 `UNAUTHENTICATED`,
+  - sinon déduit du statut, avec le vocabulaire du backend (`error-status.ts`) :
+    400 `BAD_REQUEST`, 401 `UNAUTHORIZED`,
     403 `FORBIDDEN`, 404 `NOT_FOUND`, 409 `CONFLICT`, 413
     `PAYLOAD_TOO_LARGE`, 429 `RATE_LIMITED`, 5xx `SERVER_ERROR`, autre
     `HTTP_ERROR` ;
@@ -33,7 +34,8 @@ client, sinon il en génère un. Réseau visé : lent, coupé souvent, data chè
 - **Délais** : connexion 15 s, réception 30 s, envoi 60 s. **Aucun nouvel
   essai automatique** : rejouer un `POST` peut doubler un débit ; chaque
   fonctionnalité décidera de ses nouveaux essais.
-- **Journal** : paquet `logging`, relié à `dart:developer` en debug, muet en
+- **Journal** : paquet `logging`, relié à `debugPrint` en debug (visible dans
+  le terminal de `flutter run`, `dart:developer` ne l'est pas), muet en
   release. Une ligne par requête : méthode, chemin **sans paramètres**,
   statut ou code, durée, `requestId`. Jamais de corps ni d'en-tête.
 - Le jeton de session (bearer) et la réaction au 401 arrivent avec l'auth.
