@@ -153,99 +153,104 @@ class _SplashView extends StatelessWidget {
                       ),
                     ),
                   ),
-                  SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: VoxSpacing.screenMargin,
-                      ),
-                      child: Column(
-                        children: [
-                          const Spacer(flex: 3),
-                          Container(
-                            width: 136,
-                            height: 136,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: colors.surface.withValues(alpha: 0.8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: colors.accent.withValues(
-                                    alpha: 0.25 * glow.value,
-                                  ),
-                                  blurRadius: 48,
-                                ),
-                              ],
-                            ),
-                            alignment: Alignment.center,
-                            child: VoxLogo(size: 88, progress: wave.value),
-                          ),
-                          const SizedBox(height: VoxSpacing.lg),
-                          Opacity(
-                            opacity: words.value,
-                            child: Transform.translate(
-                              offset: Offset(0, 12 * (1 - words.value)),
-                              child: Column(
-                                children: [
-                                  Text.rich(
-                                    TextSpan(
-                                      children: [
-                                        const TextSpan(text: 'Vox'),
-                                        TextSpan(
-                                          text: 'livre',
-                                          style: TextStyle(
-                                            color: colors.accent,
-                                          ),
-                                        ),
-                                      ],
+                  // Toute la surface : sans `Positioned.fill`, la colonne prend
+                  // la largeur de son plus large enfant et se colle à gauche
+                  // (vu sur le téléphone).
+                  Positioned.fill(
+                    child: SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: VoxSpacing.screenMargin,
+                        ),
+                        child: Column(
+                          children: [
+                            const Spacer(flex: 3),
+                            Container(
+                              width: 136,
+                              height: 136,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: colors.surface.withValues(alpha: 0.8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: colors.accent.withValues(
+                                      alpha: 0.25 * glow.value,
                                     ),
-                                    style: text.headlineLarge?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  const SizedBox(height: VoxSpacing.sm),
-                                  Text(
-                                    'Lisez. Écoutez. Vivez le livre.',
-                                    style: text.bodyLarge?.copyWith(
-                                      color: colors.textSecondary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: VoxSpacing.md),
-                                  const _Chip(
-                                    icon: Icons.graphic_eq,
-                                    label: 'Texte et voix synchronisés',
+                                    blurRadius: 48,
                                   ),
                                 ],
                               ),
+                              alignment: Alignment.center,
+                              child: VoxLogo(size: 88, progress: wave.value),
                             ),
-                          ),
-                          const Spacer(flex: 4),
-                          // Fine ligne « Braise » qui se remplit pendant
-                          // l'animation (pas un faux pourcentage).
-                          SizedBox(
-                            width: 176,
-                            height: 3,
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: FractionallySizedBox(
-                                widthFactor: line.value,
-                                child: const DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    gradient: VoxGradients.braise,
-                                    borderRadius: BorderRadius.all(
-                                      Radius.circular(2),
+                            const SizedBox(height: VoxSpacing.lg),
+                            Opacity(
+                              opacity: words.value,
+                              child: Transform.translate(
+                                offset: Offset(0, 12 * (1 - words.value)),
+                                child: Column(
+                                  children: [
+                                    Text.rich(
+                                      TextSpan(
+                                        children: [
+                                          const TextSpan(text: 'Vox'),
+                                          TextSpan(
+                                            text: 'livre',
+                                            style: TextStyle(
+                                              color: colors.accent,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      style: text.headlineLarge?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    const SizedBox(height: VoxSpacing.sm),
+                                    Text(
+                                      'Lisez. Écoutez. Vivez le livre.',
+                                      style: text.bodyLarge?.copyWith(
+                                        color: colors.textSecondary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: VoxSpacing.md),
+                                    const _Chip(
+                                      icon: Icons.graphic_eq,
+                                      label: 'Texte et voix synchronisés',
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const Spacer(flex: 4),
+                            // Fine ligne « Braise » qui se remplit pendant
+                            // l'animation (pas un faux pourcentage).
+                            SizedBox(
+                              width: 176,
+                              height: 3,
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: FractionallySizedBox(
+                                  widthFactor: line.value,
+                                  child: const DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: VoxGradients.braise,
+                                      borderRadius: BorderRadius.all(
+                                        Radius.circular(2),
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: VoxSpacing.md),
-                          Text(
-                            'Fait pour les apprenants',
-                            style: text.bodySmall,
-                          ),
-                          const SizedBox(height: VoxSpacing.lg),
-                        ],
+                            const SizedBox(height: VoxSpacing.md),
+                            Text(
+                              'Fait pour les apprenants',
+                              style: text.bodySmall,
+                            ),
+                            const SizedBox(height: VoxSpacing.lg),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -283,7 +288,13 @@ class _Chip extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: colors.accent),
           const SizedBox(width: VoxSpacing.sm),
-          Text(label, style: Theme.of(context).textTheme.labelMedium),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
+          ),
         ],
       ),
     );

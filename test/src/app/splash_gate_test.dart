@@ -37,6 +37,12 @@ void main() {
     await tester.tap(find.text('Écran'), warnIfMissed: false);
     expect(taps, 0, reason: 'le splash absorbe les appuis');
 
+    // Centré sur l'écran (bug vu sur le téléphone : collé à gauche).
+    expect(
+      tester.getCenter(find.byType(VoxLogo)).dx,
+      tester.getCenter(find.byType(Scaffold)).dx,
+    );
+
     await tester.pump(const Duration(milliseconds: 450));
     final midway = tester.widget<VoxLogo>(find.byType(VoxLogo)).progress;
     expect(midway, inExclusiveRange(0, 1));
