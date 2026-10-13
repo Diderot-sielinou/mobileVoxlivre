@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:voxlivre/src/shared/design/vox_colors.dart';
 import 'package:voxlivre/src/shared/design/vox_tokens.dart';
+import 'package:voxlivre/src/shared/design/vox_typography.dart';
 
 /// Cadre commun des illustrations : carte sombre éclairée par l'« Aube »
 /// (le dégradé signature, adouci pour laisser l'action principale en avant).
@@ -153,59 +154,222 @@ class _ListenIllustrationState extends State<ListenIllustration> {
   @override
   Widget build(BuildContext context) {
     final colors = context.vox;
-    final style = Theme.of(context).textTheme.titleLarge;
-    return Container(
-      padding: const EdgeInsets.all(VoxSpacing.md),
-      decoration: BoxDecoration(
-        color: colors.elevated,
-        borderRadius: BorderRadius.circular(VoxRadius.card),
-        border: Border.all(color: colors.border),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.graphic_eq, color: colors.accent, size: 20),
-              const SizedBox(width: VoxSpacing.sm),
-              Text(
-                'Lecture synchronisée',
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
-            ],
-          ),
-          const SizedBox(height: VoxSpacing.md),
-          Wrap(
-            spacing: VoxSpacing.xs,
-            runSpacing: VoxSpacing.xs,
-            children: [
-              for (var i = 0; i < _words.length; i++)
-                AnimatedContainer(
-                  duration: VoxMotion.wordHighlight,
-                  curve: Curves.easeOut,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: VoxSpacing.xs + 2,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: i == _current
-                        ? colors.wordHighlight
-                        : colors.wordHighlight.withValues(alpha: 0),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    _words[i],
-                    style: style?.copyWith(
-                      color: i == _current
-                          ? colors.onWordHighlight
-                          : i < _current
-                          ? colors.text
-                          : colors.textSecondary,
+    final text = Theme.of(context).textTheme;
+    final card = BoxDecoration(
+      color: colors.elevated,
+      borderRadius: BorderRadius.circular(VoxRadius.chip),
+      border: Border.all(color: colors.border),
+    );
+    const tabular = TextStyle(fontFeatures: VoxTypography.tabularFigures);
+
+    // Réduit au besoin sur les petits écrans plutôt que de déborder.
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: SizedBox(
+        width: 320,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const _Pill(
+              icon: Icons.graphic_eq,
+              label: 'Synthèse vocale synchronisée',
+            ),
+            const SizedBox(height: VoxSpacing.md),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // La page du livre…
+                  Expanded(
+                    flex: 2,
+                    child: Container(
+                      padding: const EdgeInsets.all(
+                        VoxSpacing.sm + VoxSpacing.xs,
+                      ),
+                      decoration: card,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (final width in [
+                            52.0,
+                            92.0,
+                            76.0,
+                            92.0,
+                            60.0,
+                          ]) ...[
+                            _Line(width: width, color: colors.border),
+                            const SizedBox(height: VoxSpacing.sm),
+                          ],
+                          const Spacer(),
+                          Text('p. 142', style: text.labelSmall),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-            ],
+                  const SizedBox(width: VoxSpacing.sm),
+                  // … et le même passage, lu à voix haute.
+                  Expanded(
+                    flex: 3,
+                    child: Container(
+                      padding: const EdgeInsets.all(
+                        VoxSpacing.sm + VoxSpacing.xs,
+                      ),
+                      decoration: card,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.volume_up,
+                                size: 16,
+                                color: colors.accent,
+                              ),
+                              const SizedBox(width: VoxSpacing.xs),
+                              Flexible(
+                                child: Text(
+                                  '02:18 / 05:40',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: text.labelSmall
+                                      ?.merge(tabular)
+                                      .copyWith(
+                                        color: colors.accent,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: VoxSpacing.sm),
+                          Wrap(
+                            spacing: 2,
+                            runSpacing: 2,
+                            children: [
+                              for (var i = 0; i < _words.length; i++)
+                                _Word(
+                                  word: _words[i],
+                                  current: i == _current,
+                                  read: i < _current,
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: VoxSpacing.sm),
+            // Barre de lecture.
+            Container(
+              padding: const EdgeInsets.all(VoxSpacing.sm),
+              decoration: card.copyWith(color: colors.background),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: colors.accent,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.pause, size: 20, color: colors.onAccent),
+                  ),
+                  const SizedBox(width: VoxSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      'Vitesse 1,15×',
+                      style: text.labelMedium?.merge(tabular),
+                    ),
+                  ),
+                  for (final lit in [true, true, false])
+                    Container(
+                      width: 6,
+                      height: 6,
+                      margin: const EdgeInsets.only(left: VoxSpacing.xs),
+                      decoration: BoxDecoration(
+                        color: lit ? colors.accent : colors.border,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Un mot du passage : surligné (en cours), lu, ou à venir.
+class _Word extends StatelessWidget {
+  const _Word({required this.word, required this.current, required this.read});
+
+  final String word;
+  final bool current;
+  final bool read;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vox;
+    return AnimatedContainer(
+      duration: VoxMotion.wordHighlight,
+      curve: Curves.easeOut,
+      padding: const EdgeInsets.symmetric(
+        horizontal: VoxSpacing.xs,
+        vertical: 1,
+      ),
+      decoration: BoxDecoration(
+        color: current
+            ? colors.wordHighlight
+            : colors.wordHighlight.withValues(alpha: 0),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        word,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          color: current
+              ? colors.onWordHighlight
+              : read
+              ? colors.text
+              : colors.textSecondary,
+        ),
+      ),
+    );
+  }
+}
+
+/// Étiquette arrondie : icône ambre + texte.
+class _Pill extends StatelessWidget {
+  const _Pill({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vox;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: VoxSpacing.sm + VoxSpacing.xs,
+        vertical: VoxSpacing.xs + 2,
+      ),
+      decoration: BoxDecoration(
+        color: colors.background.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(VoxRadius.card),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: colors.accent),
+          const SizedBox(width: VoxSpacing.sm),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
           ),
         ],
       ),
