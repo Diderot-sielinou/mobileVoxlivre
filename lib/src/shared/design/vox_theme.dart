@@ -82,9 +82,12 @@ abstract final class VoxTheme {
         ),
       ),
       textButtonTheme: TextButtonThemeData(
+        // Ambre, comme les liens des maquettes : l'indigo primaire n'atteint
+        // pas 4,5:1 en texte sur le fond sombre (4,30:1).
         style: TextButton.styleFrom(
           minimumSize: buttonSize,
           shape: buttonShape,
+          foregroundColor: c.accent,
           textStyle: textTheme.labelLarge,
         ),
       ),

@@ -28,6 +28,13 @@ void main() {
         'sur primaire / primaire': (c.onPrimary, c.primary),
         'sur accent / accent': (c.onAccent, c.accent),
         'mot surligné': (c.onWordHighlight, c.wordHighlight),
+        // Boutons texte et liens (« Passer », « Renvoyer le code »).
+        'lien / fond': (c.accent, c.background),
+        'lien / carte': (c.accent, c.surface),
+        'sur Braise / Braise': (
+          VoxGradients.onBraise,
+          VoxGradients.braise.colors.last,
+        ),
         'erreur / fond': (c.error, c.background),
         'succès / fond': (c.success, c.background),
         'avertissement / fond': (c.warning, c.background),
