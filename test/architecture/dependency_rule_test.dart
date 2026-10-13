@@ -132,7 +132,8 @@ List<String> violations(String srcRoot) {
       }
     }
   }
-  return found;
+  // Ordre stable : `listSync` suit le système de fichiers (différent en CI).
+  return found..sort();
 }
 
 void main() {
@@ -164,8 +165,8 @@ void main() {
       write('features/player/infrastructure/audio.dart', '');
 
       expect(violations(root.path), [
-        contains('domain/word.dart importe package:flutter/widgets.dart'),
         contains('application/play.dart importe ../infrastructure/audio.dart'),
+        contains('domain/word.dart importe package:flutter/widgets.dart'),
       ]);
     });
 
