@@ -28,9 +28,16 @@ String coverHeroTag(String documentId) => 'cover-$documentId';
 /// Fiche d'un document (maquette « Fiche document ») : le cache d'abord,
 /// puis la fiche et la table des matières du réseau (ADR-0006).
 class DocumentScreen extends ConsumerStatefulWidget {
-  const DocumentScreen({required this.documentId, super.key});
+  const DocumentScreen({
+    required this.documentId,
+    required this.onOpenText,
+    super.key,
+  });
 
   final String documentId;
+
+  /// Ouvre la vérification du texte.
+  final VoidCallback onOpenText;
 
   @override
   ConsumerState<DocumentScreen> createState() => _DocumentScreenState();
@@ -126,6 +133,7 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
             tooltip: 'Plus d’actions',
             icon: const Icon(Icons.more_vert),
             onSelected: (action) => switch (action) {
+              _MenuAction.text => widget.onOpenText(),
               _MenuAction.rename => _rename(title),
               _MenuAction.delete => _delete(
                 title: title,
@@ -134,6 +142,15 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
               ),
             },
             itemBuilder: (context) => [
+              if (sheet?.stage == DocumentStage.textReady)
+                const PopupMenuItem(
+                  value: _MenuAction.text,
+                  child: ListTile(
+                    leading: Icon(Icons.article_outlined),
+                    title: Text('Voir le texte'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
               const PopupMenuItem(
                 value: _MenuAction.rename,
                 child: ListTile(
@@ -209,7 +226,7 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
               'supprimer ce document et réimporter le PDF.',
         ),
       if (sheet.reviewPending)
-        const _InfoCard(
+        _InfoCard(
           tone: VoxBannerTone.warning,
           icon: Icons.warning_amber_rounded,
           title:
@@ -217,10 +234,10 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
           body:
               'Vérifiez le texte avant de le convertir, pour une lecture '
               'juste.',
-          action: _Pending(
+          action: VoxPrimaryButton(
             label: 'Vérifier le texte',
             icon: Icons.spellcheck,
-            caption: 'Disponible à l’étape vérification',
+            onPressed: widget.onOpenText,
           ),
         ),
       if (item?.conversion case final conversion?
@@ -236,7 +253,7 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
   }
 }
 
-enum _MenuAction { rename, delete }
+enum _MenuAction { text, rename, delete }
 
 /// Couverture, titre, informations (maquette : « 120 pages • 214 300
 /// caractères • Scan (OCR) »).

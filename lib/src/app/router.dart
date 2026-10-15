@@ -13,6 +13,7 @@ import 'package:voxlivre/src/features/auth/presentation/widgets/account_summary.
 import 'package:voxlivre/src/features/library/presentation/document_screen.dart';
 import 'package:voxlivre/src/features/library/presentation/import_screen.dart';
 import 'package:voxlivre/src/features/library/presentation/library_screen.dart';
+import 'package:voxlivre/src/features/library/presentation/review_screen.dart';
 import 'package:voxlivre/src/features/onboarding/onboarding_providers.dart';
 import 'package:voxlivre/src/features/onboarding/presentation/onboarding_routes.dart';
 import 'package:voxlivre/src/features/onboarding/presentation/onboarding_screen.dart';
@@ -97,7 +98,20 @@ final routerProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) => DocumentScreen(
                       key: ValueKey(state.pathParameters['id']),
                       documentId: state.pathParameters['id']!,
+                      onOpenText: () => context.push(
+                        '${AppRoutes.library}/documents/'
+                        '${state.pathParameters['id']}/text',
+                      ),
                     ),
+                    routes: [
+                      GoRoute(
+                        path: 'text',
+                        builder: (context, state) => ReviewScreen(
+                          documentId: state.pathParameters['id']!,
+                          onReviewed: context.pop,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
