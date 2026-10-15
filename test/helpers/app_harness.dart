@@ -4,12 +4,14 @@ import 'package:voxlivre/src/app/voxlivre_app.dart';
 import 'package:voxlivre/src/core/clock.dart';
 import 'package:voxlivre/src/features/auth/application/auth_session.dart';
 import 'package:voxlivre/src/features/auth/auth_providers.dart';
+import 'package:voxlivre/src/features/conversion/conversion_providers.dart';
 import 'package:voxlivre/src/features/library/library_providers.dart';
 import 'package:voxlivre/src/features/onboarding/domain/onboarding_store.dart';
 import 'package:voxlivre/src/features/onboarding/onboarding_providers.dart';
 import 'package:voxlivre/src/shared/time/clock_providers.dart';
 
 import '../src/features/auth/fakes.dart';
+import '../src/features/conversion/fakes.dart';
 import '../src/features/library/fakes.dart';
 
 /// Mémoire du premier lancement, en mémoire.
@@ -47,6 +49,7 @@ typedef Harness = ({
   FakePdfSource pdfs,
   FakeUploads uploads,
   FakeDocumentTextRepository texts,
+  FakeConversionGateway conversions,
 });
 
 /// Lance l'app ; avec [token], la session est déjà ouverte ; [onboarded]
@@ -61,8 +64,10 @@ Future<Harness> pumpVoxlivre(
   FakePdfSource? pdfs,
   FakeUploads? uploads,
   FakeDocumentTextRepository? texts,
+  FakeConversionGateway? conversions,
   bool settle = true,
 }) async {
+  final conversionGateway = conversions ?? FakeConversionGateway();
   final textRepository = texts ?? FakeDocumentTextRepository();
   final pdfSource = pdfs ?? FakePdfSource();
   final uploader = uploads ?? FakeUploads();
@@ -91,6 +96,7 @@ Future<Harness> pumpVoxlivre(
         pdfSourceProvider.overrideWithValue(pdfSource),
         documentUploadsProvider.overrideWithValue(uploader),
         documentTextRepositoryProvider.overrideWithValue(textRepository),
+        conversionGatewayProvider.overrideWithValue(conversionGateway),
       ],
       child: const VoxlivreApp(),
     ),
@@ -112,5 +118,6 @@ Future<Harness> pumpVoxlivre(
     pdfs: pdfSource,
     uploads: uploader,
     texts: textRepository,
+    conversions: conversionGateway,
   );
 }
