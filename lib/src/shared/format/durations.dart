@@ -12,6 +12,16 @@ abstract final class VoxFormat {
         : '$hours h ${rest.toString().padLeft(2, '0')}';
   }
 
+  /// Nombre à la française : « 214 300 » (espace fine insécable).
+  static String count(int value) {
+    final digits = value.abs().toString();
+    final groups = <String>[];
+    for (var end = digits.length; end > 0; end -= 3) {
+      groups.insert(0, digits.substring(end < 3 ? 0 : end - 3, end));
+    }
+    return '${value < 0 ? '-' : ''}${groups.join('\u202F')}';
+  }
+
   /// Ancienneté : « à l'instant », « il y a 5 min », « il y a 2 h »,
   /// « hier », « il y a 3 jours ».
   static String ago(DateTime then, DateTime now) {

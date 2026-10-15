@@ -3,7 +3,7 @@ import 'package:voxlivre/src/shared/design/vox_colors.dart';
 import 'package:voxlivre/src/shared/design/vox_tokens.dart';
 
 /// Couverture générée d'un document PDF sans image (design system §1.2) :
-/// deux teintes de la palette « Aube » tirées du titre, et son initiale.
+/// deux teintes de la palette « Aube » tirées du titre, et ses initiales.
 /// Le même titre donne toujours la même couverture. Décorative : le titre
 /// est lu à côté.
 class VoxCover extends StatelessWidget {
@@ -27,6 +27,46 @@ class VoxCover extends StatelessWidget {
     [Color(0xFF1E1B4B), Color(0xFFB45309)],
   ];
 
+  /// Petits mots ignorés pour les initiales.
+  static const _smallWords = {
+    'le',
+    'la',
+    'les',
+    'l',
+    'de',
+    'des',
+    'du',
+    'd',
+    'un',
+    'une',
+    'et',
+    'en',
+    'au',
+    'aux',
+    'à',
+    'a',
+    'sur',
+    'pour',
+    'par',
+    'the',
+    'of',
+    'and',
+  };
+
+  /// Initiales des deux premiers mots porteurs de sens
+  /// (« Droit des obligations — L2 » → « DO »).
+  static String initialsOf(String title) {
+    final words = title
+        .toLowerCase()
+        .split(RegExp(r'[^\p{L}\p{N}]+', unicode: true))
+        .where((w) => w.isNotEmpty)
+        .toList();
+    final meaningful = words.where((w) => !_smallWords.contains(w)).toList();
+    final picked = (meaningful.isEmpty ? words : meaningful).take(2);
+    if (picked.isEmpty) return '?';
+    return picked.map((w) => w.characters.first.toUpperCase()).join();
+  }
+
   /// Index de palette stable pour [title] (empreinte des points de code).
   static int paletteFor(String title) =>
       title.runes.fold(0, (sum, rune) => (sum * 31 + rune) & 0x7fffffff) %
@@ -35,9 +75,7 @@ class VoxCover extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = palettes[paletteFor(title)];
-    final initial = title.trim().isEmpty
-        ? '?'
-        : title.trim().characters.first.toUpperCase();
+    final initials = initialsOf(title);
     return ExcludeSemantics(
       child: Container(
         width: width,
@@ -53,7 +91,7 @@ class VoxCover extends StatelessWidget {
         padding: const EdgeInsets.all(VoxSpacing.sm),
         alignment: Alignment.topLeft,
         child: Text(
-          initial,
+          initials,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             color: VoxGradients.onAube,
             fontWeight: FontWeight.w800,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:voxlivre/src/features/library/domain/library_item.dart';
+import 'package:voxlivre/src/features/library/presentation/document_screen.dart';
 import 'package:voxlivre/src/features/library/presentation/library_texts.dart';
 import 'package:voxlivre/src/shared/design/vox_colors.dart';
 import 'package:voxlivre/src/shared/design/vox_tokens.dart';
@@ -9,9 +10,12 @@ import 'package:voxlivre/src/shared/design/widgets/vox_cover.dart';
 /// Un livre : couverture générée, titre, statut (icône + texte), détail,
 /// et anneau de progression quand la lecture a commencé.
 class LibraryCard extends StatelessWidget {
-  const LibraryCard({required this.item, super.key});
+  const LibraryCard({required this.item, this.onTap, super.key});
 
   final LibraryItem item;
+
+  /// Ouvre la fiche du document.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +31,7 @@ class LibraryCard extends StatelessWidget {
 
     return Semantics(
       container: true,
+      button: onTap != null,
       label: [
         item.title,
         look.label,
@@ -35,55 +40,65 @@ class LibraryCard extends StatelessWidget {
       ].join('. '),
       child: ExcludeSemantics(
         child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(VoxSpacing.sm + VoxSpacing.xs),
-            child: Row(
-              children: [
-                VoxCover(title: item.title),
-                const SizedBox(width: VoxSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: text.titleMedium,
-                      ),
-                      const SizedBox(height: VoxSpacing.xs),
-                      Row(
-                        children: [
-                          Icon(look.icon, size: 16, color: look.color),
-                          const SizedBox(width: VoxSpacing.xs),
-                          Flexible(
-                            child: Text(
-                              look.label,
-                              overflow: TextOverflow.ellipsis,
-                              style: text.labelMedium?.copyWith(
-                                color: look.color,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (detail.isNotEmpty) ...[
-                        const SizedBox(height: 2),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(VoxSpacing.sm + VoxSpacing.xs),
+              child: Row(
+                children: [
+                  HeroMode(
+                    enabled: !MediaQuery.disableAnimationsOf(context),
+                    child: Hero(
+                      tag: coverHeroTag(item.documentId),
+                      child: VoxCover(title: item.title),
+                    ),
+                  ),
+                  const SizedBox(width: VoxSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          detail,
+                          item.title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: text.bodySmall,
+                          style: text.titleMedium,
                         ),
+                        const SizedBox(height: VoxSpacing.xs),
+                        Row(
+                          children: [
+                            Icon(look.icon, size: 16, color: look.color),
+                            const SizedBox(width: VoxSpacing.xs),
+                            Flexible(
+                              child: Text(
+                                look.label,
+                                overflow: TextOverflow.ellipsis,
+                                style: text.labelMedium?.copyWith(
+                                  color: look.color,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (detail.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            detail,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: text.bodySmall,
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                if (showRing) ...[
-                  const SizedBox(width: VoxSpacing.sm),
-                  _Ring(percent: percent),
+                  if (showRing) ...[
+                    const SizedBox(width: VoxSpacing.sm),
+                    _Ring(percent: percent),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

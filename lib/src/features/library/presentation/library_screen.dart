@@ -20,10 +20,17 @@ const processingRefresh = Duration(seconds: 15);
 
 /// Onglet Bibliothèque : le cache d'abord, le réseau ensuite (ADR-0006).
 class LibraryScreen extends ConsumerStatefulWidget {
-  const LibraryScreen({required this.onImport, super.key});
+  const LibraryScreen({
+    required this.onImport,
+    required this.onOpenDocument,
+    super.key,
+  });
 
   /// Ouvre l'onglet Importer.
   final VoidCallback onImport;
+
+  /// Ouvre la fiche d'un document.
+  final ValueChanged<String> onOpenDocument;
 
   @override
   ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
@@ -162,7 +169,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           child: _Cascade(
             index: index,
             animate: animate,
-            child: LibraryCard(key: ValueKey(item.documentId), item: item),
+            child: LibraryCard(
+              key: ValueKey(item.documentId),
+              item: item,
+              onTap: () => widget.onOpenDocument(item.documentId),
+            ),
           ),
         ),
     ];
