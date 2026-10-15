@@ -2,8 +2,13 @@ import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:voxlivre/src/features/library/application/clear_library.dart';
+import 'package:voxlivre/src/features/library/application/delete_document.dart';
+import 'package:voxlivre/src/features/library/application/refresh_document.dart';
 import 'package:voxlivre/src/features/library/application/refresh_library.dart';
+import 'package:voxlivre/src/features/library/application/rename_document.dart';
+import 'package:voxlivre/src/features/library/application/watch_document.dart';
 import 'package:voxlivre/src/features/library/application/watch_library.dart';
+import 'package:voxlivre/src/features/library/infrastructure/drift_document_repository.dart';
 import 'package:voxlivre/src/features/library/infrastructure/drift_library_repository.dart';
 import 'package:voxlivre/src/features/library/infrastructure/library_database.dart';
 import 'package:voxlivre/src/features/library/library_providers.dart';
@@ -35,6 +40,14 @@ void main() {
     expect(container.read(watchLibraryProvider), isA<WatchLibrary>());
     expect(container.read(refreshLibraryProvider), isA<RefreshLibrary>());
     expect(container.read(clearLibraryProvider), isA<ClearLibrary>());
+    expect(
+      container.read(documentRepositoryProvider),
+      isA<DriftDocumentRepository>(),
+    );
+    expect(container.read(watchDocumentProvider), isA<WatchDocument>());
+    expect(container.read(refreshDocumentProvider), isA<RefreshDocument>());
+    expect(container.read(renameDocumentProvider), isA<RenameDocument>());
+    expect(container.read(deleteDocumentProvider), isA<DeleteDocument>());
 
     final seen = <bool>[];
     container.listen(

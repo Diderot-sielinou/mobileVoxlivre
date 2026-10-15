@@ -43,6 +43,7 @@ typedef Harness = ({
   FixedClock clock,
   MemoryOnboardingStore onboarding,
   FakeLibraryRepository library,
+  FakeDocumentRepository documents,
 });
 
 /// Lance l'app ; avec [token], la session est déjà ouverte ; [onboarded]
@@ -53,9 +54,11 @@ Future<Harness> pumpVoxlivre(
   bool onboarded = true,
   bool reduceMotion = false,
   FakeLibraryRepository? library,
+  FakeDocumentRepository? documents,
   bool settle = true,
 }) async {
   final shelf = library ?? FakeLibraryRepository();
+  final sheets = documents ?? FakeDocumentRepository();
   final onboarding = MemoryOnboardingStore(completed: onboarded);
   final gateway = FakeAuthGateway();
   final store = MemorySessionStore(token);
@@ -75,6 +78,7 @@ Future<Harness> pumpVoxlivre(
         clockProvider.overrideWithValue(clock),
         onboardingStoreProvider.overrideWithValue(onboarding),
         libraryRepositoryProvider.overrideWithValue(shelf),
+        documentRepositoryProvider.overrideWithValue(sheets),
       ],
       child: const VoxlivreApp(),
     ),
@@ -92,5 +96,6 @@ Future<Harness> pumpVoxlivre(
     clock: clock,
     onboarding: onboarding,
     library: shelf,
+    documents: sheets,
   );
 }

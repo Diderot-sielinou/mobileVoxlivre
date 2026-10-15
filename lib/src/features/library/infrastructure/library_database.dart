@@ -23,9 +23,20 @@ class LibraryCacheState extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
+/// La fiche d'un document en cache : le JSON de `GET /v1/documents/:id`
+/// et celui de sa table des matières (ADR-0006).
+class CachedDocuments extends Table {
+  TextColumn get documentId => text()();
+  TextColumn get payload => text()();
+  TextColumn get outline => text().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {documentId};
+}
+
 /// Base locale de la bibliothèque (`library.sqlite`), propre à la
 /// fonctionnalité (ADR-0006).
-@DriftDatabase(tables: [CachedLibraryItems, LibraryCacheState])
+@DriftDatabase(tables: [CachedLibraryItems, LibraryCacheState, CachedDocuments])
 class LibraryDatabase extends _$LibraryDatabase {
   LibraryDatabase(super.executor);
 
@@ -33,6 +44,14 @@ class LibraryDatabase extends _$LibraryDatabase {
   factory LibraryDatabase.open() =>
       LibraryDatabase(driftDatabase(name: 'library'));
 
+  /// v2 : fiches des documents.
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (m, from, to) async {
+      if (from < 2) await m.createTable(cachedDocuments);
+    },
+  );
 }

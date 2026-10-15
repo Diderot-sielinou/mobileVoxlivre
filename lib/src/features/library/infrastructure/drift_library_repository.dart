@@ -96,6 +96,7 @@ final class DriftLibraryRepository implements LibraryRepository {
   Future<void> clear() => _db.transaction(() async {
     await _db.delete(_db.cachedLibraryItems).go();
     await _db.delete(_db.libraryCacheState).go();
+    await _db.delete(_db.cachedDocuments).go();
   });
 
   /// Un livre que l'app ne sait pas lire (backend plus récent) est écarté
