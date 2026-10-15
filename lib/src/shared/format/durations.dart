@@ -22,6 +22,9 @@ abstract final class VoxFormat {
     return '${value < 0 ? '-' : ''}${groups.join('\u202F')}';
   }
 
+  /// Nombre de pages : « 1 page », « 84 pages ».
+  static String pages(int count) => count > 1 ? '$count pages' : '$count page';
+
   /// Ancienneté : « à l'instant », « il y a 5 min », « il y a 2 h »,
   /// « hier », « il y a 3 jours ».
   static String ago(DateTime then, DateTime now) {

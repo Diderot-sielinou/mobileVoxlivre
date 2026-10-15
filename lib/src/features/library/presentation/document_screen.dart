@@ -285,7 +285,7 @@ class _Header extends StatelessWidget {
             if (pageCount != null)
               _Meta(
                 icon: Icons.description_outlined,
-                label: '$pageCount pages',
+                label: VoxFormat.pages(pageCount!),
               ),
             if (chars != null)
               _Meta(

@@ -353,6 +353,22 @@ void main() {
       expect(VoxFormat.count(-1234567), '-1 234 567');
     });
 
+    testWidgets('petite couverture : initiales sur une ligne', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Center(
+            child: VoxCover(title: 'Essai gros envoi', width: 44, height: 56),
+          ),
+        ),
+      );
+      final text = tester.getRect(find.text('EG'));
+      final cover = tester.getRect(find.byType(VoxCover));
+      expect(text.height, lessThan(cover.height / 2));
+      expect(tester.takeException(), isNull);
+    });
+
     test('initiales de la couverture : mots porteurs de sens', () {
       expect(VoxCover.initialsOf('Droit des obligations — L2'), 'DO');
       expect(VoxCover.initialsOf('L’économie du Cameroun'), 'ÉC');

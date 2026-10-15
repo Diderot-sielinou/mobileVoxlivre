@@ -58,7 +58,7 @@ String statusDetail(LibraryItem item) {
           'parties',
     LibraryStatus.processing => 'Analyse du texte…',
     LibraryStatus.notConverted => switch (item.pageCount) {
-      final pages? => '$pages pages · à convertir',
+      final pages? => '${VoxFormat.pages(pages)} · à convertir',
       null => 'À convertir',
     },
     LibraryStatus.failed => failureText(

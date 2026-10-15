@@ -90,11 +90,18 @@ class VoxCover extends StatelessWidget {
         ),
         padding: const EdgeInsets.all(VoxSpacing.sm),
         alignment: Alignment.topLeft,
-        child: Text(
-          initials,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: VoxGradients.onAube,
-            fontWeight: FontWeight.w800,
+        // Une seule ligne, réduite sur les petites couvertures (44 px).
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.topLeft,
+          child: Text(
+            initials,
+            maxLines: 1,
+            softWrap: false,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: VoxGradients.onAube,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
       ),

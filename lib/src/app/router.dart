@@ -90,7 +90,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'documents/:id',
+                    // Une clé par document : passer d'une fiche à une autre
+                    // (après un import) donne un nouvel état, donc une
+                    // nouvelle lecture.
                     builder: (context, state) => DocumentScreen(
+                      key: ValueKey(state.pathParameters['id']),
                       documentId: state.pathParameters['id']!,
                     ),
                   ),

@@ -3,6 +3,7 @@ import 'package:voxlivre/src/features/library/domain/library_item.dart';
 import 'package:voxlivre/src/shared/design/vox_colors.dart';
 import 'package:voxlivre/src/shared/design/vox_tokens.dart';
 import 'package:voxlivre/src/shared/design/widgets/vox_cover.dart';
+import 'package:voxlivre/src/shared/format/durations.dart';
 
 /// Suppression d'un document (maquette « Supprimer un document ») :
 /// confirmation, puis suppression, ou « Suppression suspendue » si une
@@ -299,7 +300,7 @@ class _BookSummary extends StatelessWidget {
                   style: text.titleSmall,
                 ),
                 if (pageCount != null)
-                  Text('$pageCount pages', style: text.bodySmall),
+                  Text(VoxFormat.pages(pageCount!), style: text.bodySmall),
               ],
             ),
           ),
