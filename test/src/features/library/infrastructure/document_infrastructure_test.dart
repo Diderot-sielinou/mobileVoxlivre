@@ -263,19 +263,21 @@ void main() {
     );
   });
 
-  test('migration v1 → v2 : la table des fiches est créée', () async {
+  test('migration v1 → v3 : fiches et pages créées', () async {
     final dir = await Directory.systemTemp.createTemp('voxlivre-db');
     addTearDown(() => dir.delete(recursive: true));
     final file = File('${dir.path}/library.sqlite');
 
-    // Une base v1 : sans `cached_documents`.
+    // Une base v1 : sans `cached_documents` ni `cached_pages`.
     final v2 = LibraryDatabase(NativeDatabase(file));
     await v2.customStatement('DROP TABLE cached_documents');
+    await v2.customStatement('DROP TABLE cached_pages');
     await v2.customStatement('PRAGMA user_version = 1');
     await v2.close();
 
     final upgraded = LibraryDatabase(NativeDatabase(file));
     addTearDown(upgraded.close);
     expect(await upgraded.select(upgraded.cachedDocuments).get(), isEmpty);
+    expect(await upgraded.select(upgraded.cachedPages).get(), isEmpty);
   });
 }

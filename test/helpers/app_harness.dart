@@ -46,6 +46,7 @@ typedef Harness = ({
   FakeDocumentRepository documents,
   FakePdfSource pdfs,
   FakeUploads uploads,
+  FakeDocumentTextRepository texts,
 });
 
 /// Lance l'app ; avec [token], la session est déjà ouverte ; [onboarded]
@@ -59,8 +60,10 @@ Future<Harness> pumpVoxlivre(
   FakeDocumentRepository? documents,
   FakePdfSource? pdfs,
   FakeUploads? uploads,
+  FakeDocumentTextRepository? texts,
   bool settle = true,
 }) async {
+  final textRepository = texts ?? FakeDocumentTextRepository();
   final pdfSource = pdfs ?? FakePdfSource();
   final uploader = uploads ?? FakeUploads();
   final shelf = library ?? FakeLibraryRepository();
@@ -87,6 +90,7 @@ Future<Harness> pumpVoxlivre(
         documentRepositoryProvider.overrideWithValue(sheets),
         pdfSourceProvider.overrideWithValue(pdfSource),
         documentUploadsProvider.overrideWithValue(uploader),
+        documentTextRepositoryProvider.overrideWithValue(textRepository),
       ],
       child: const VoxlivreApp(),
     ),
@@ -107,5 +111,6 @@ Future<Harness> pumpVoxlivre(
     documents: sheets,
     pdfs: pdfSource,
     uploads: uploader,
+    texts: textRepository,
   );
 }

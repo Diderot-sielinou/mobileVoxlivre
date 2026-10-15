@@ -2,20 +2,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxlivre/src/features/library/application/clear_library.dart';
 import 'package:voxlivre/src/features/library/application/delete_document.dart';
 import 'package:voxlivre/src/features/library/application/import_document.dart';
+import 'package:voxlivre/src/features/library/application/mark_document_reviewed.dart';
 import 'package:voxlivre/src/features/library/application/pick_pdf.dart';
 import 'package:voxlivre/src/features/library/application/refresh_document.dart';
+import 'package:voxlivre/src/features/library/application/refresh_document_pages.dart';
 import 'package:voxlivre/src/features/library/application/refresh_library.dart';
 import 'package:voxlivre/src/features/library/application/rename_document.dart';
+import 'package:voxlivre/src/features/library/application/save_document_page.dart';
 import 'package:voxlivre/src/features/library/application/watch_document.dart';
+import 'package:voxlivre/src/features/library/application/watch_document_pages.dart';
 import 'package:voxlivre/src/features/library/application/watch_library.dart';
 import 'package:voxlivre/src/features/library/domain/document_import.dart';
+import 'package:voxlivre/src/features/library/domain/document_page.dart';
 import 'package:voxlivre/src/features/library/domain/document_repository.dart';
 import 'package:voxlivre/src/features/library/domain/document_sheet.dart';
+import 'package:voxlivre/src/features/library/domain/document_text_repository.dart';
 import 'package:voxlivre/src/features/library/domain/library_repository.dart';
 import 'package:voxlivre/src/features/library/domain/library_snapshot.dart';
 import 'package:voxlivre/src/features/library/infrastructure/api_document_uploads.dart';
 import 'package:voxlivre/src/features/library/infrastructure/document_api.dart';
+import 'package:voxlivre/src/features/library/infrastructure/document_text_api.dart';
 import 'package:voxlivre/src/features/library/infrastructure/drift_document_repository.dart';
+import 'package:voxlivre/src/features/library/infrastructure/drift_document_text_repository.dart';
 import 'package:voxlivre/src/features/library/infrastructure/drift_library_repository.dart';
 import 'package:voxlivre/src/features/library/infrastructure/file_selector_pdf_source.dart';
 import 'package:voxlivre/src/features/library/infrastructure/library_api.dart';
@@ -111,4 +119,34 @@ final importDocumentProvider = Provider<ImportDocument>(
     ref.watch(documentUploadsProvider),
     ref.watch(pdfSourceProvider),
   ),
+);
+
+final documentTextRepositoryProvider = Provider<DocumentTextRepository>(
+  (ref) => DriftDocumentTextRepository(
+    ref.watch(libraryDatabaseProvider),
+    DocumentTextApi(ref.watch(apiClientProvider)),
+  ),
+);
+
+final watchDocumentPagesProvider = Provider<WatchDocumentPages>(
+  (ref) => WatchDocumentPages(ref.watch(documentTextRepositoryProvider)),
+);
+
+final refreshDocumentPagesProvider = Provider<RefreshDocumentPages>(
+  (ref) => RefreshDocumentPages(ref.watch(documentTextRepositoryProvider)),
+);
+
+final saveDocumentPageProvider = Provider<SaveDocumentPage>(
+  (ref) => SaveDocumentPage(ref.watch(documentTextRepositoryProvider)),
+);
+
+final markDocumentReviewedProvider = Provider<MarkDocumentReviewed>(
+  (ref) => MarkDocumentReviewed(ref.watch(documentTextRepositoryProvider)),
+);
+
+/// Le texte d'un document en cache, page par page, à jour.
+// Type de famille non exporté par flutter_riverpod 3 : il est inféré.
+// ignore: specify_nonobvious_property_types
+final documentPagesProvider = StreamProvider.family<List<DocumentPage>, String>(
+  (ref, id) => ref.watch(watchDocumentPagesProvider)(id),
 );

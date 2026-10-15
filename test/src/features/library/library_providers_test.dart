@@ -3,13 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:voxlivre/src/features/library/application/clear_library.dart';
 import 'package:voxlivre/src/features/library/application/delete_document.dart';
+import 'package:voxlivre/src/features/library/application/import_document.dart';
+import 'package:voxlivre/src/features/library/application/mark_document_reviewed.dart';
+import 'package:voxlivre/src/features/library/application/pick_pdf.dart';
 import 'package:voxlivre/src/features/library/application/refresh_document.dart';
+import 'package:voxlivre/src/features/library/application/refresh_document_pages.dart';
 import 'package:voxlivre/src/features/library/application/refresh_library.dart';
 import 'package:voxlivre/src/features/library/application/rename_document.dart';
+import 'package:voxlivre/src/features/library/application/save_document_page.dart';
 import 'package:voxlivre/src/features/library/application/watch_document.dart';
+import 'package:voxlivre/src/features/library/application/watch_document_pages.dart';
 import 'package:voxlivre/src/features/library/application/watch_library.dart';
+import 'package:voxlivre/src/features/library/infrastructure/api_document_uploads.dart';
 import 'package:voxlivre/src/features/library/infrastructure/drift_document_repository.dart';
+import 'package:voxlivre/src/features/library/infrastructure/drift_document_text_repository.dart';
 import 'package:voxlivre/src/features/library/infrastructure/drift_library_repository.dart';
+import 'package:voxlivre/src/features/library/infrastructure/file_selector_pdf_source.dart';
 import 'package:voxlivre/src/features/library/infrastructure/library_database.dart';
 import 'package:voxlivre/src/features/library/library_providers.dart';
 import 'package:voxlivre/src/shared/http/http_providers.dart';
@@ -48,6 +57,30 @@ void main() {
     expect(container.read(refreshDocumentProvider), isA<RefreshDocument>());
     expect(container.read(renameDocumentProvider), isA<RenameDocument>());
     expect(container.read(deleteDocumentProvider), isA<DeleteDocument>());
+    expect(
+      container.read(documentTextRepositoryProvider),
+      isA<DriftDocumentTextRepository>(),
+    );
+    expect(
+      container.read(watchDocumentPagesProvider),
+      isA<WatchDocumentPages>(),
+    );
+    expect(
+      container.read(refreshDocumentPagesProvider),
+      isA<RefreshDocumentPages>(),
+    );
+    expect(container.read(saveDocumentPageProvider), isA<SaveDocumentPage>());
+    expect(
+      container.read(markDocumentReviewedProvider),
+      isA<MarkDocumentReviewed>(),
+    );
+    expect(container.read(pdfSourceProvider), isA<FileSelectorPdfSource>());
+    expect(
+      container.read(documentUploadsProvider),
+      isA<ApiDocumentUploads>(),
+    );
+    expect(container.read(pickPdfProvider), isA<PickPdf>());
+    expect(container.read(importDocumentProvider), isA<ImportDocument>());
 
     final seen = <bool>[];
     container.listen(

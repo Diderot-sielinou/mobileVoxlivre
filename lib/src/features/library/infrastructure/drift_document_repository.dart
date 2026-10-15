@@ -98,6 +98,9 @@ final class DriftDocumentRepository implements DocumentRepository {
           await (_db.delete(
             _db.cachedLibraryItems,
           )..where((t) => t.documentId.equals(documentId))).go();
+          await (_db.delete(
+            _db.cachedPages,
+          )..where((t) => t.documentId.equals(documentId))).go();
         });
         return const Result.ok(null);
     }

@@ -89,7 +89,7 @@ void main() {
       expect(request.headers['x-request-id'], 'req-1');
     });
 
-    test('POST et PATCH envoient le corps, DELETE sans corps', () async {
+    test('POST, PATCH et PUT envoient le corps, DELETE sans corps', () async {
       final (:client, :adapter) = _client((_) async => _body('{}', 200));
 
       await client.post('/a', body: {'x': 1}, decode: (_) => null);
@@ -99,6 +99,10 @@ void main() {
       await client.patch('/a', body: {'x': 2}, decode: (_) => null);
       expect(adapter.last!.method, 'PATCH');
       expect(adapter.last!.data, {'x': 2});
+
+      await client.put('/a', body: {'x': 3}, decode: (_) => null);
+      expect(adapter.last!.method, 'PUT');
+      expect(adapter.last!.data, {'x': 3});
 
       await client.delete('/a', decode: (_) => null);
       expect(adapter.last!.method, 'DELETE');

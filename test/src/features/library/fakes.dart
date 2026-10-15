@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:voxlivre/src/core/failure.dart';
 import 'package:voxlivre/src/core/result.dart';
 import 'package:voxlivre/src/features/library/domain/document_import.dart';
+import 'package:voxlivre/src/features/library/domain/document_page.dart';
 import 'package:voxlivre/src/features/library/domain/document_repository.dart';
 import 'package:voxlivre/src/features/library/domain/document_sheet.dart';
+import 'package:voxlivre/src/features/library/domain/document_text_repository.dart';
 import 'package:voxlivre/src/features/library/domain/library_item.dart';
 import 'package:voxlivre/src/features/library/domain/library_repository.dart';
 import 'package:voxlivre/src/features/library/domain/library_snapshot.dart';
@@ -294,4 +296,87 @@ final class FakeUploads implements DocumentUploads {
 final class _DetailedFailure extends Failure {
   const _DetailedFailure(super.code, Map<String, Object?> details)
     : super(details: details);
+}
+
+/// Page de test.
+DocumentPage page(
+  int number, {
+  String? text,
+  double? confidence,
+  List<SetAsideLine> setAside = const [],
+}) => DocumentPage(
+  pageNumber: number,
+  text: text ?? 'Texte de la page $number.',
+  confidence: confidence,
+  setAside: setAside,
+);
+
+/// Texte en mémoire : [remote] est ce que « le réseau » renverra ;
+/// [failure] fait échouer le prochain appel ; [onReviewed] simule la fiche
+/// mise à jour par le backend.
+final class FakeDocumentTextRepository implements DocumentTextRepository {
+  FakeDocumentTextRepository({this.remote = const [], this.onReviewed});
+
+  List<DocumentPage> remote;
+  List<DocumentPage> _cached = const [];
+  String? failure;
+  void Function()? onReviewed;
+  int refreshes = 0;
+  final saved = <(int, String)>[];
+  int reviews = 0;
+
+  final _changes = StreamController<List<DocumentPage>>.broadcast();
+
+  @override
+  Stream<List<DocumentPage>> watchPages(String documentId) {
+    late final StreamSubscription<List<DocumentPage>> changes;
+    final controller = StreamController<List<DocumentPage>>(
+      onCancel: () => changes.cancel(),
+    )..add(_cached);
+    changes = _changes.stream.listen(controller.add);
+    return controller.stream;
+  }
+
+  @override
+  Future<Result<void, Failure>> refreshPages(String documentId) async {
+    refreshes++;
+    if (failure case final code?) return Result.err(FakeFailure(code));
+    _set(remote);
+    return const Result.ok(null);
+  }
+
+  @override
+  Future<Result<void, Failure>> savePage(
+    String documentId,
+    int pageNumber,
+    String text,
+  ) async {
+    if (failure case final code?) return Result.err(FakeFailure(code));
+    saved.add((pageNumber, text));
+    _set([
+      for (final p in _cached)
+        p.pageNumber == pageNumber
+            ? DocumentPage(
+                pageNumber: pageNumber,
+                text: text,
+                setAside: p.setAside,
+                confidence: p.confidence,
+              )
+            : p,
+    ]);
+    return const Result.ok(null);
+  }
+
+  @override
+  Future<Result<void, Failure>> markReviewed(String documentId) async {
+    if (failure case final code?) return Result.err(FakeFailure(code));
+    reviews++;
+    onReviewed?.call();
+    return const Result.ok(null);
+  }
+
+  void _set(List<DocumentPage> pages) {
+    _cached = pages;
+    _changes.add(pages);
+  }
 }

@@ -751,6 +751,276 @@ class CachedDocumentsCompanion extends UpdateCompanion<CachedDocument> {
   }
 }
 
+class $CachedPagesTable extends CachedPages
+    with TableInfo<$CachedPagesTable, CachedPage> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CachedPagesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _documentIdMeta = const VerificationMeta(
+    'documentId',
+  );
+  @override
+  late final GeneratedColumn<String> documentId = GeneratedColumn<String>(
+    'document_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pageNumberMeta = const VerificationMeta(
+    'pageNumber',
+  );
+  @override
+  late final GeneratedColumn<int> pageNumber = GeneratedColumn<int>(
+    'page_number',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _payloadMeta = const VerificationMeta(
+    'payload',
+  );
+  @override
+  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
+    'payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [documentId, pageNumber, payload];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cached_pages';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CachedPage> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('document_id')) {
+      context.handle(
+        _documentIdMeta,
+        documentId.isAcceptableOrUnknown(data['document_id']!, _documentIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_documentIdMeta);
+    }
+    if (data.containsKey('page_number')) {
+      context.handle(
+        _pageNumberMeta,
+        pageNumber.isAcceptableOrUnknown(data['page_number']!, _pageNumberMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pageNumberMeta);
+    }
+    if (data.containsKey('payload')) {
+      context.handle(
+        _payloadMeta,
+        payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_payloadMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {documentId, pageNumber};
+  @override
+  CachedPage map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CachedPage(
+      documentId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}document_id'],
+      )!,
+      pageNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}page_number'],
+      )!,
+      payload: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload'],
+      )!,
+    );
+  }
+
+  @override
+  $CachedPagesTable createAlias(String alias) {
+    return $CachedPagesTable(attachedDatabase, alias);
+  }
+}
+
+class CachedPage extends DataClass implements Insertable<CachedPage> {
+  final String documentId;
+  final int pageNumber;
+  final String payload;
+  const CachedPage({
+    required this.documentId,
+    required this.pageNumber,
+    required this.payload,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['document_id'] = Variable<String>(documentId);
+    map['page_number'] = Variable<int>(pageNumber);
+    map['payload'] = Variable<String>(payload);
+    return map;
+  }
+
+  CachedPagesCompanion toCompanion(bool nullToAbsent) {
+    return CachedPagesCompanion(
+      documentId: Value(documentId),
+      pageNumber: Value(pageNumber),
+      payload: Value(payload),
+    );
+  }
+
+  factory CachedPage.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CachedPage(
+      documentId: serializer.fromJson<String>(json['documentId']),
+      pageNumber: serializer.fromJson<int>(json['pageNumber']),
+      payload: serializer.fromJson<String>(json['payload']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'documentId': serializer.toJson<String>(documentId),
+      'pageNumber': serializer.toJson<int>(pageNumber),
+      'payload': serializer.toJson<String>(payload),
+    };
+  }
+
+  CachedPage copyWith({String? documentId, int? pageNumber, String? payload}) =>
+      CachedPage(
+        documentId: documentId ?? this.documentId,
+        pageNumber: pageNumber ?? this.pageNumber,
+        payload: payload ?? this.payload,
+      );
+  CachedPage copyWithCompanion(CachedPagesCompanion data) {
+    return CachedPage(
+      documentId: data.documentId.present
+          ? data.documentId.value
+          : this.documentId,
+      pageNumber: data.pageNumber.present
+          ? data.pageNumber.value
+          : this.pageNumber,
+      payload: data.payload.present ? data.payload.value : this.payload,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CachedPage(')
+          ..write('documentId: $documentId, ')
+          ..write('pageNumber: $pageNumber, ')
+          ..write('payload: $payload')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(documentId, pageNumber, payload);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CachedPage &&
+          other.documentId == this.documentId &&
+          other.pageNumber == this.pageNumber &&
+          other.payload == this.payload);
+}
+
+class CachedPagesCompanion extends UpdateCompanion<CachedPage> {
+  final Value<String> documentId;
+  final Value<int> pageNumber;
+  final Value<String> payload;
+  final Value<int> rowid;
+  const CachedPagesCompanion({
+    this.documentId = const Value.absent(),
+    this.pageNumber = const Value.absent(),
+    this.payload = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CachedPagesCompanion.insert({
+    required String documentId,
+    required int pageNumber,
+    required String payload,
+    this.rowid = const Value.absent(),
+  }) : documentId = Value(documentId),
+       pageNumber = Value(pageNumber),
+       payload = Value(payload);
+  static Insertable<CachedPage> custom({
+    Expression<String>? documentId,
+    Expression<int>? pageNumber,
+    Expression<String>? payload,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (documentId != null) 'document_id': documentId,
+      if (pageNumber != null) 'page_number': pageNumber,
+      if (payload != null) 'payload': payload,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CachedPagesCompanion copyWith({
+    Value<String>? documentId,
+    Value<int>? pageNumber,
+    Value<String>? payload,
+    Value<int>? rowid,
+  }) {
+    return CachedPagesCompanion(
+      documentId: documentId ?? this.documentId,
+      pageNumber: pageNumber ?? this.pageNumber,
+      payload: payload ?? this.payload,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (documentId.present) {
+      map['document_id'] = Variable<String>(documentId.value);
+    }
+    if (pageNumber.present) {
+      map['page_number'] = Variable<int>(pageNumber.value);
+    }
+    if (payload.present) {
+      map['payload'] = Variable<String>(payload.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CachedPagesCompanion(')
+          ..write('documentId: $documentId, ')
+          ..write('pageNumber: $pageNumber, ')
+          ..write('payload: $payload, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LibraryDatabase extends GeneratedDatabase {
   _$LibraryDatabase(QueryExecutor e) : super(e);
   $LibraryDatabaseManager get managers => $LibraryDatabaseManager(this);
@@ -761,6 +1031,7 @@ abstract class _$LibraryDatabase extends GeneratedDatabase {
   late final $CachedDocumentsTable cachedDocuments = $CachedDocumentsTable(
     this,
   );
+  late final $CachedPagesTable cachedPages = $CachedPagesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -769,6 +1040,7 @@ abstract class _$LibraryDatabase extends GeneratedDatabase {
     cachedLibraryItems,
     libraryCacheState,
     cachedDocuments,
+    cachedPages,
   ];
 }
 
@@ -1273,6 +1545,172 @@ typedef $$CachedDocumentsTableProcessedTableManager =
       CachedDocument,
       PrefetchHooks Function()
     >;
+typedef $$CachedPagesTableCreateCompanionBuilder =
+    CachedPagesCompanion Function({
+      required String documentId,
+      required int pageNumber,
+      required String payload,
+      Value<int> rowid,
+    });
+typedef $$CachedPagesTableUpdateCompanionBuilder =
+    CachedPagesCompanion Function({
+      Value<String> documentId,
+      Value<int> pageNumber,
+      Value<String> payload,
+      Value<int> rowid,
+    });
+
+class $$CachedPagesTableFilterComposer
+    extends Composer<_$LibraryDatabase, $CachedPagesTable> {
+  $$CachedPagesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get documentId => $composableBuilder(
+    column: $table.documentId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CachedPagesTableOrderingComposer
+    extends Composer<_$LibraryDatabase, $CachedPagesTable> {
+  $$CachedPagesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get documentId => $composableBuilder(
+    column: $table.documentId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CachedPagesTableAnnotationComposer
+    extends Composer<_$LibraryDatabase, $CachedPagesTable> {
+  $$CachedPagesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get documentId => $composableBuilder(
+    column: $table.documentId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get payload =>
+      $composableBuilder(column: $table.payload, builder: (column) => column);
+}
+
+class $$CachedPagesTableTableManager
+    extends
+        RootTableManager<
+          _$LibraryDatabase,
+          $CachedPagesTable,
+          CachedPage,
+          $$CachedPagesTableFilterComposer,
+          $$CachedPagesTableOrderingComposer,
+          $$CachedPagesTableAnnotationComposer,
+          $$CachedPagesTableCreateCompanionBuilder,
+          $$CachedPagesTableUpdateCompanionBuilder,
+          (
+            CachedPage,
+            BaseReferences<_$LibraryDatabase, $CachedPagesTable, CachedPage>,
+          ),
+          CachedPage,
+          PrefetchHooks Function()
+        > {
+  $$CachedPagesTableTableManager(_$LibraryDatabase db, $CachedPagesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CachedPagesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CachedPagesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CachedPagesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> documentId = const Value.absent(),
+                Value<int> pageNumber = const Value.absent(),
+                Value<String> payload = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CachedPagesCompanion(
+                documentId: documentId,
+                pageNumber: pageNumber,
+                payload: payload,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String documentId,
+                required int pageNumber,
+                required String payload,
+                Value<int> rowid = const Value.absent(),
+              }) => CachedPagesCompanion.insert(
+                documentId: documentId,
+                pageNumber: pageNumber,
+                payload: payload,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CachedPagesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LibraryDatabase,
+      $CachedPagesTable,
+      CachedPage,
+      $$CachedPagesTableFilterComposer,
+      $$CachedPagesTableOrderingComposer,
+      $$CachedPagesTableAnnotationComposer,
+      $$CachedPagesTableCreateCompanionBuilder,
+      $$CachedPagesTableUpdateCompanionBuilder,
+      (
+        CachedPage,
+        BaseReferences<_$LibraryDatabase, $CachedPagesTable, CachedPage>,
+      ),
+      CachedPage,
+      PrefetchHooks Function()
+    >;
 
 class $LibraryDatabaseManager {
   final _$LibraryDatabase _db;
@@ -1283,4 +1721,6 @@ class $LibraryDatabaseManager {
       $$LibraryCacheStateTableTableManager(_db, _db.libraryCacheState);
   $$CachedDocumentsTableTableManager get cachedDocuments =>
       $$CachedDocumentsTableTableManager(_db, _db.cachedDocuments);
+  $$CachedPagesTableTableManager get cachedPages =>
+      $$CachedPagesTableTableManager(_db, _db.cachedPages);
 }

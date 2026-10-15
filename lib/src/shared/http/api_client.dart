@@ -69,6 +69,13 @@ final class ApiClient {
     Object? body,
   }) => _send('PATCH', path, decode, body: body);
 
+  /// `PUT` de [body] (encodé en JSON) vers [path].
+  Future<Result<T, ApiFailure>> put<T>(
+    String path, {
+    required Decode<T> decode,
+    Object? body,
+  }) => _send('PUT', path, decode, body: body);
+
   /// `DELETE` de [path].
   Future<Result<T, ApiFailure>> delete<T>(
     String path, {
