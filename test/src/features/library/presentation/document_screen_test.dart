@@ -159,14 +159,43 @@ void main() {
       status: LibraryStatus.processing,
     );
 
+    expect(find.text('Analyse en cours'), findsOneWidget);
+    expect(find.text('Reconnaissance du texte'), findsOneWidget);
+    expect(find.text('20/120 pages'), findsOneWidget);
+    expect(find.text('Scan détecté : le texte est une image'), findsOneWidget);
+    expect(find.text('Terminé'), findsNWidgets(2), reason: 'reçu, lu');
+    expect(find.text('En cours'), findsOneWidget);
     expect(
-      find.text('Reconnaissance du texte · 20/120 pages'),
-      findsOneWidget,
+      find.text('En attente'),
+      findsNWidgets(2),
+      reason: 'nettoyage, prêt',
     );
+    expect(find.text('Pourquoi ce nettoyage ?'), findsOneWidget);
     expect(find.text('Choisir la voix et convertir'), findsNothing);
 
     await tester.pump(documentWorkRefresh);
     expect(h.documents.refreshes, 2);
+    await leave(tester);
+  });
+
+  testWidgets('PDF texte en lecture : pas d’étape de reconnaissance', (
+    tester,
+  ) async {
+    await open(
+      tester,
+      remote: sheet(
+        'a',
+        title: title,
+        stage: DocumentStage.extracting,
+        method: null,
+      ),
+      status: LibraryStatus.processing,
+      reduceMotion: true,
+    );
+
+    expect(find.text('Lecture du PDF'), findsOneWidget);
+    expect(find.text('Reconnaissance du texte'), findsNothing);
+    expect(find.text('En cours'), findsOneWidget);
     await leave(tester);
   });
 

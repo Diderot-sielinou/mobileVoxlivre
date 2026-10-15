@@ -16,6 +16,7 @@ import 'package:voxlivre/src/shared/design/vox_tokens.dart';
 import 'package:voxlivre/src/shared/design/widgets/vox_banner.dart';
 import 'package:voxlivre/src/shared/design/widgets/vox_cover.dart';
 import 'package:voxlivre/src/shared/design/widgets/vox_primary_button.dart';
+import 'package:voxlivre/src/shared/design/widgets/vox_timeline.dart';
 import 'package:voxlivre/src/shared/format/durations.dart';
 
 /// Rythme du rafraîchissement tant que le texte se prépare.
@@ -378,47 +379,89 @@ class _WorkingCard extends StatelessWidget {
     final colors = context.vox;
     final text = Theme.of(context).textTheme;
     final ocr = sheet.ocrProgress;
-    final label = switch (sheet.stage) {
-      DocumentStage.awaitingUpload => 'Envoi du PDF en attente',
-      _ when ocr != null =>
-        'Reconnaissance du texte · ${ocr.done}/${ocr.total} pages',
-      _ => 'Analyse du texte en cours',
-    };
-    return Semantics(
-      liveRegion: true,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(VoxSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+    final current = sheet.analysisStep;
+    VoxStepState state(AnalysisStep step) => step.index < current.index
+        ? VoxStepState.done
+        : step == current
+        ? VoxStepState.active
+        : VoxStepState.pending;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          liveRegion: true,
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(VoxSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(Icons.hourglass_top, color: colors.accent),
-                  const SizedBox(width: VoxSpacing.sm),
-                  Expanded(child: Text(label, style: text.titleSmall)),
+                  Text('Analyse en cours', style: text.titleMedium),
+                  const SizedBox(height: VoxSpacing.md),
+                  VoxTimeline(
+                    steps: [
+                      VoxStep(
+                        title: 'Fichier reçu',
+                        detail: current == AnalysisStep.received
+                            ? 'Envoi du PDF en attente'
+                            : 'PDF vérifié',
+                        state: state(AnalysisStep.received),
+                      ),
+                      VoxStep(
+                        title: 'Lecture du PDF',
+                        detail: sheet.scanned
+                            ? 'Scan détecté : le texte est une image'
+                            : 'Texte de chaque page, ou scan à reconnaître',
+                        state: state(AnalysisStep.reading),
+                      ),
+                      if (sheet.scanned)
+                        VoxStep(
+                          title: 'Reconnaissance du texte',
+                          detail: ocr == null
+                              ? 'Page par page, par lots de 10'
+                              : '${ocr.done}/${ocr.total} pages',
+                          state: state(AnalysisStep.recognizing),
+                          progress: ocr == null || ocr.total == 0
+                              ? null
+                              : ocr.done / ocr.total,
+                        ),
+                      VoxStep(
+                        title: 'Nettoyage',
+                        detail:
+                            'En-têtes, numéros de page, notes ; table des '
+                            'matières',
+                        state: state(AnalysisStep.cleaning),
+                      ),
+                      VoxStep(
+                        title: 'Texte prêt',
+                        detail: 'À relire si des pages sont douteuses',
+                        state: state(AnalysisStep.ready),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: VoxSpacing.sm),
+                  Text(
+                    'Vous pouvez quitter cet écran : le travail continue.',
+                    style: text.bodySmall,
+                  ),
                 ],
               ),
-              const SizedBox(height: VoxSpacing.sm),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: LinearProgressIndicator(
-                  value: ocr == null || ocr.total == 0
-                      ? null
-                      : ocr.done / ocr.total,
-                  minHeight: 6,
-                  backgroundColor: colors.border,
-                ),
-              ),
-              const SizedBox(height: VoxSpacing.sm),
-              Text(
-                'Vous pouvez quitter cet écran : le travail continue.',
-                style: text.bodySmall,
-              ),
-            ],
+            ),
           ),
         ),
-      ),
+        const SizedBox(height: VoxSpacing.md),
+        Card(
+          child: ListTile(
+            leading: Icon(Icons.lightbulb_outline, color: colors.accent),
+            title: const Text('Pourquoi ce nettoyage ?'),
+            subtitle: const Text(
+              'Voxlivre retire les numéros de page, en-têtes et notes de bas '
+              'de page pour que l’écoute reste fluide. Vous les retrouvez '
+              'dans « Voir le texte ».',
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

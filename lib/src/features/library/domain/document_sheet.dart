@@ -36,6 +36,10 @@ enum DocumentStage {
       this == awaitingUpload || this == uploaded || this == extracting;
 }
 
+/// Étape de l'analyse, déduite des champs du backend (C2) : un PDF texte
+/// est lu en une seule tâche ; seul un scan passe par la reconnaissance.
+enum AnalysisStep { received, reading, recognizing, cleaning, ready }
+
 /// D'où vient le texte : la couche texte du PDF, ou la reconnaissance d'un
 /// scan (ADR-0024 du backend).
 enum ExtractionMethod { native, ocr }
@@ -75,4 +79,21 @@ abstract class DocumentSheet with _$DocumentSheet {
 
   /// La relecture est imposée et pas encore faite (RF-06).
   bool get reviewPending => reviewRequired && reviewedAt == null;
+
+  /// Le document est un scan (reconnaissance du texte).
+  bool get scanned => method == ExtractionMethod.ocr || ocrProgress != null;
+
+  /// Où en est l'analyse.
+  AnalysisStep get analysisStep {
+    final ocr = ocrProgress;
+    return switch (stage) {
+      DocumentStage.awaitingUpload => AnalysisStep.received,
+      DocumentStage.uploaded => AnalysisStep.reading,
+      DocumentStage.extracting when ocr != null && ocr.done >= ocr.total =>
+        AnalysisStep.cleaning,
+      DocumentStage.extracting when scanned => AnalysisStep.recognizing,
+      DocumentStage.extracting => AnalysisStep.reading,
+      _ => AnalysisStep.ready,
+    };
+  }
 }
