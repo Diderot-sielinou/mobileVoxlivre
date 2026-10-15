@@ -8,6 +8,7 @@ import 'package:voxlivre/src/shared/design/vox_colors.dart';
 import 'package:voxlivre/src/shared/design/vox_tokens.dart';
 import 'package:voxlivre/src/shared/design/widgets/vox_banner.dart';
 import 'package:voxlivre/src/shared/design/widgets/vox_primary_button.dart';
+import 'package:voxlivre/src/shared/design/widgets/vox_timeline.dart';
 
 /// Rythme du suivi tant que la conversion travaille.
 const conversionRefresh = Duration(seconds: 10);
@@ -202,7 +203,7 @@ class _ConversionScreenState extends ConsumerState<ConversionScreen> {
   }
 }
 
-/// Les quatre étapes : icône **et** état écrit (jamais la couleur seule).
+/// Les quatre étapes, tirées du statut réel (frise partagée).
 class _Steps extends StatelessWidget {
   const _Steps({required this.conversion});
 
@@ -213,6 +214,11 @@ class _Steps extends StatelessWidget {
     final step = conversion.step;
     final parts = conversion.partCount;
     final ratio = conversion.synthesisRatio;
+    VoxStepState state(int index) => index < step || step == 4
+        ? VoxStepState.done
+        : index == step
+        ? VoxStepState.active
+        : VoxStepState.pending;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(VoxSpacing.md),
@@ -222,46 +228,45 @@ class _Steps extends StatelessWidget {
             Semantics(
               liveRegion: true,
               child: Text(
-                step == 4 ? 'Étape 4 sur 4' : 'Étape $step sur 4',
+                'Étape $step sur 4',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: context.vox.accent,
                 ),
               ),
             ),
             const SizedBox(height: VoxSpacing.sm),
-            _Step(
-              index: 1,
-              current: step,
-              title: 'Préparation du texte',
-              detail: 'Découpage en phrases pour la voix',
-            ),
-            _Step(
-              index: 2,
-              current: step,
-              title: 'Synthèse vocale',
-              detail: step == 2
-                  ? [
-                      if (parts != null && parts > 0)
-                        _partLabel(conversion.partsReady, parts),
-                      if (ratio != null) '${(ratio * 100).floor()} %',
-                    ].join(' · ')
-                  : 'La voix lit votre texte',
-              progress: step == 2 ? ratio : null,
-            ),
-            _Step(
-              index: 3,
-              current: step,
-              title: 'Assemblage',
-              detail: 'Parties audio et texte synchronisé mot à mot',
-            ),
-            _Step(
-              index: 4,
-              current: step,
-              title: 'Livre audio prêt',
-              detail: parts != null && step == 4
-                  ? (parts > 1 ? '$parts parties' : '$parts partie')
-                  : 'À écouter, même hors ligne',
-              last: true,
+            VoxTimeline(
+              steps: [
+                VoxStep(
+                  title: 'Préparation du texte',
+                  detail: 'Découpage en phrases pour la voix',
+                  state: state(1),
+                ),
+                VoxStep(
+                  title: 'Synthèse vocale',
+                  detail: step == 2
+                      ? [
+                          if (parts != null && parts > 0)
+                            _partLabel(conversion.partsReady, parts),
+                          if (ratio != null) '${(ratio * 100).floor()} %',
+                        ].join(' · ')
+                      : 'La voix lit votre texte',
+                  state: state(2),
+                  progress: ratio,
+                ),
+                VoxStep(
+                  title: 'Assemblage',
+                  detail: 'Parties audio et texte synchronisé mot à mot',
+                  state: state(3),
+                ),
+                VoxStep(
+                  title: 'Livre audio prêt',
+                  detail: parts != null && step == 4
+                      ? (parts > 1 ? '$parts parties' : '$parts partie')
+                      : 'À écouter, même hors ligne',
+                  state: state(4),
+                ),
+              ],
             ),
           ],
         ),
@@ -273,80 +278,3 @@ class _Steps extends StatelessWidget {
 /// Partie en cours de synthèse : la suivante des parties prêtes.
 String _partLabel(int ready, int total) =>
     'Partie ${ready + 1 > total ? total : ready + 1} sur $total';
-
-class _Step extends StatelessWidget {
-  const _Step({
-    required this.index,
-    required this.current,
-    required this.title,
-    required this.detail,
-    this.progress,
-    this.last = false,
-  });
-
-  final int index;
-  final int current;
-  final String title;
-  final String detail;
-  final double? progress;
-  final bool last;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.vox;
-    final text = Theme.of(context).textTheme;
-    final done = index < current || (last && current == 4);
-    final active = index == current && !done;
-    final (icon, color, status) = done
-        ? (Icons.check_circle, colors.success, 'Terminé')
-        : active
-        ? (Icons.timelapse, colors.accent, 'En cours')
-        : (Icons.radio_button_unchecked, colors.textSecondary, 'En attente');
-    return Padding(
-      padding: EdgeInsets.only(bottom: last ? 0 : VoxSpacing.md),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color),
-          const SizedBox(width: VoxSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: text.titleSmall?.copyWith(
-                          color: done || active ? null : colors.textSecondary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: VoxSpacing.xs),
-                    Text(
-                      status,
-                      style: text.labelSmall?.copyWith(color: color),
-                    ),
-                  ],
-                ),
-                Text(detail, style: text.bodySmall),
-                if (active && progress != null) ...[
-                  const SizedBox(height: VoxSpacing.xs),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(3),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 6,
-                      backgroundColor: colors.border,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
