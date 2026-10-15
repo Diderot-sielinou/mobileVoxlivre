@@ -25,6 +25,16 @@ abstract final class VoxFormat {
   /// Nombre de pages : « 1 page », « 84 pages ».
   static String pages(int count) => count > 1 ? '$count pages' : '$count page';
 
+  /// Taille d'un fichier : « 850 Ko », « 6,4 Mo » (base 1024, comme le
+  /// plafond de 50 Mo du backend).
+  static String bytes(int value) {
+    const kb = 1024;
+    const mb = kb * 1024;
+    if (value < mb) return '${(value / kb).ceil()} Ko';
+    final tenths = (value * 10 / mb).round();
+    return '${tenths ~/ 10},${tenths % 10} Mo';
+  }
+
   /// Ancienneté : « à l'instant », « il y a 5 min », « il y a 2 h »,
   /// « hier », « il y a 3 jours ».
   static String ago(DateTime then, DateTime now) {

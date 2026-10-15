@@ -21,6 +21,9 @@ final class FakeHttp implements HttpClientAdapter {
   FakeReply Function(RequestOptions request) respond;
   final requests = <RequestOptions>[];
 
+  /// Corps envoyés en flux (un `PUT` de fichier), dans l'ordre.
+  final streamed = <List<int>>[];
+
   /// Client de l'app au-dessus de ce faux réseau.
   ApiClient client({AuthTokenSource? tokens}) => ApiClient(
     Dio(BaseOptions(baseUrl: 'https://api.test'))..httpClientAdapter = this,
@@ -35,6 +38,9 @@ final class FakeHttp implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     requests.add(options);
+    if (requestStream != null) {
+      streamed.add([await for (final chunk in requestStream) ...chunk]);
+    }
     final r = respond(options);
     return ResponseBody.fromString(
       r.body == null ? '' : jsonEncode(r.body),

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:voxlivre/src/core/failure.dart';
 import 'package:voxlivre/src/core/result.dart';
+import 'package:voxlivre/src/features/library/domain/document_import.dart';
 import 'package:voxlivre/src/features/library/domain/document_repository.dart';
 import 'package:voxlivre/src/features/library/domain/document_sheet.dart';
 import 'package:voxlivre/src/features/library/domain/library_item.dart';
@@ -195,3 +196,102 @@ DocumentSheet sheet(
   extractionError: extractionError,
   outline: outline,
 );
+
+/// PDF de test (6,4 Mo).
+PickedPdf pdf({
+  String name = 'Droit_des_obligations.pdf',
+  int sizeBytes = 6710886,
+  bool isPdf = true,
+}) => PickedPdf(
+  name: name,
+  path: '/cache/abc/$name',
+  sizeBytes: sizeBytes,
+  isPdf: isPdf,
+);
+
+/// Sélecteur en mémoire : [next] est le prochain fichier « choisi ».
+final class FakePdfSource implements PdfSource {
+  FakePdfSource({this.next});
+
+  PickedPdf? next;
+  final discarded = <PickedPdf>[];
+
+  @override
+  Future<PickedPdf?> pick() async => next;
+
+  @override
+  Future<void> discard(PickedPdf file) async => discarded.add(file);
+}
+
+/// Envois scriptés : chaque appel à [send] prend le prochain code de
+/// [sendCodes] (`null` = réussi) ; [sendGate] retient l'envoi.
+final class FakeUploads implements DocumentUploads {
+  FakeUploads({List<String?>? sendCodes}) : sendCodes = sendCodes ?? [null];
+
+  String? requestCode;
+  String? confirmCode;
+  List<String?> sendCodes;
+  List<String?> confirmCodes = [];
+  Map<String, Object?> confirmDetails = const {};
+  Completer<void>? sendGate;
+
+  final requests = <({String title, int sizeBytes})>[];
+  final sends = <String>[];
+  final confirms = <String>[];
+
+  @override
+  Future<Result<UploadTicket, Failure>> request({
+    required String title,
+    required int sizeBytes,
+  }) async {
+    requests.add((title: title, sizeBytes: sizeBytes));
+    if (requestCode case final code?) return Result.err(FakeFailure(code));
+    return Result.ok(
+      UploadTicket(
+        documentId: 'doc-${requests.length}',
+        url: Uri.parse('https://stockage.test/put'),
+        headers: const {'content-type': 'application/pdf'},
+      ),
+    );
+  }
+
+  @override
+  Future<Result<void, Failure>> send(
+    UploadTicket ticket,
+    PickedPdf file, {
+    void Function(int sent)? onProgress,
+    Future<void>? cancel,
+  }) async {
+    sends.add(ticket.documentId);
+    onProgress?.call(file.sizeBytes ~/ 2);
+    if (sendGate case final gate?) {
+      var cancelled = false;
+      await Future.any([
+        gate.future,
+        if (cancel != null) cancel.then((_) => cancelled = true),
+      ]);
+      if (cancelled) return const Result.err(FakeFailure('CANCELLED'));
+    }
+    final code = sendCodes.isEmpty ? null : sendCodes.removeAt(0);
+    if (code != null) return Result.err(FakeFailure(code));
+    onProgress?.call(file.sizeBytes);
+    return const Result.ok(null);
+  }
+
+  @override
+  Future<Result<void, Failure>> confirm(String documentId) async {
+    confirms.add(documentId);
+    final code = confirmCodes.isNotEmpty
+        ? confirmCodes.removeAt(0)
+        : confirmCode;
+    if (code != null) {
+      return Result.err(_DetailedFailure(code, confirmDetails));
+    }
+    return const Result.ok(null);
+  }
+}
+
+final class _DetailedFailure extends Failure {
+  const _DetailedFailure(super.code, Map<String, Object?> details)
+    : super(details: details);
+}

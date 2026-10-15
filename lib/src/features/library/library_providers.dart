@@ -1,18 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxlivre/src/features/library/application/clear_library.dart';
 import 'package:voxlivre/src/features/library/application/delete_document.dart';
+import 'package:voxlivre/src/features/library/application/import_document.dart';
+import 'package:voxlivre/src/features/library/application/pick_pdf.dart';
 import 'package:voxlivre/src/features/library/application/refresh_document.dart';
 import 'package:voxlivre/src/features/library/application/refresh_library.dart';
 import 'package:voxlivre/src/features/library/application/rename_document.dart';
 import 'package:voxlivre/src/features/library/application/watch_document.dart';
 import 'package:voxlivre/src/features/library/application/watch_library.dart';
+import 'package:voxlivre/src/features/library/domain/document_import.dart';
 import 'package:voxlivre/src/features/library/domain/document_repository.dart';
 import 'package:voxlivre/src/features/library/domain/document_sheet.dart';
 import 'package:voxlivre/src/features/library/domain/library_repository.dart';
 import 'package:voxlivre/src/features/library/domain/library_snapshot.dart';
+import 'package:voxlivre/src/features/library/infrastructure/api_document_uploads.dart';
 import 'package:voxlivre/src/features/library/infrastructure/document_api.dart';
 import 'package:voxlivre/src/features/library/infrastructure/drift_document_repository.dart';
 import 'package:voxlivre/src/features/library/infrastructure/drift_library_repository.dart';
+import 'package:voxlivre/src/features/library/infrastructure/file_selector_pdf_source.dart';
 import 'package:voxlivre/src/features/library/infrastructure/library_api.dart';
 import 'package:voxlivre/src/features/library/infrastructure/library_database.dart';
 import 'package:voxlivre/src/shared/http/http_providers.dart';
@@ -83,4 +88,27 @@ final deleteDocumentProvider = Provider<DeleteDocument>(
 // ignore: specify_nonobvious_property_types
 final documentSheetProvider = StreamProvider.family<DocumentSheet?, String>(
   (ref, id) => ref.watch(watchDocumentProvider)(id),
+);
+
+/// Le sélecteur de PDF du système (ADR-0007).
+final pdfSourceProvider = Provider<PdfSource>(
+  (ref) => const FileSelectorPdfSource(),
+);
+
+final documentUploadsProvider = Provider<DocumentUploads>(
+  (ref) => ApiDocumentUploads(
+    ref.watch(apiClientProvider),
+    ref.watch(signedUploadProvider),
+  ),
+);
+
+final pickPdfProvider = Provider<PickPdf>(
+  (ref) => PickPdf(ref.watch(pdfSourceProvider)),
+);
+
+final importDocumentProvider = Provider<ImportDocument>(
+  (ref) => ImportDocument(
+    ref.watch(documentUploadsProvider),
+    ref.watch(pdfSourceProvider),
+  ),
 );
