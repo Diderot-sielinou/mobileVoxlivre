@@ -442,9 +442,11 @@ class _Sending extends StatelessWidget {
           const SizedBox(height: VoxSpacing.md),
           VoxBanner(
             icon: Icons.wifi_off,
-            message:
-                'Le réseau a coupé : l’envoi reprend depuis le début '
-                '(essai $attempt).',
+            message: progress?.resumable ?? false
+                ? 'Le réseau a coupé : l’envoi reprend où il s’était '
+                      'arrêté (essai $attempt).'
+                : 'Le réseau a coupé : l’envoi reprend depuis le début '
+                      '(essai $attempt).',
           ),
         ],
         const SizedBox(height: VoxSpacing.md),
@@ -453,7 +455,7 @@ class _Sending extends StatelessWidget {
             leading: Icon(Icons.phone_android, color: colors.warning),
             title: const Text('Gardez l’application ouverte.'),
             subtitle: const Text(
-              'Si le réseau coupe, l’envoi est relancé automatiquement.',
+              'Si le réseau coupe, l’envoi reprend automatiquement.',
             ),
           ),
         ),

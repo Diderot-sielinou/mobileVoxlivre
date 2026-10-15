@@ -142,6 +142,33 @@ void main() {
     await leave(tester);
   });
 
+  testWidgets('par morceaux : la coupure reprend où elle s’était arrêtée', (
+    tester,
+  ) async {
+    final uploads = FakeUploads()
+      ..partSize = 5 * 1024 * 1024
+      ..partCodes = [null, 'NETWORK_UNAVAILABLE'];
+    await open(
+      tester,
+      uploads: uploads,
+      file: pdf(sizeBytes: 12 * 1024 * 1024),
+    );
+    await pickAndAttest(tester);
+    await tester.tap(find.text('Envoyer'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      find.textContaining('reprend où il s’était arrêté (essai 2)'),
+      findsOneWidget,
+    );
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(uploads.sentParts, [1, 2, 2, 3]);
+    expect(find.byType(DocumentScreen), findsOneWidget);
+    await leave(tester);
+  });
+
   testWidgets('refus : fichier trop gros, puis un autre fichier', (
     tester,
   ) async {

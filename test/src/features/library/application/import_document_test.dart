@@ -187,6 +187,116 @@ void main() {
       expect(codeOf(await run(cancel: Future.value())), 'CANCELLED');
     });
 
+    group('par morceaux (ADR-0009)', () {
+      const mib = 1024 * 1024;
+      // 12 Mio : morceaux de 5, 5 et 2 Mio.
+      final big = pdf(sizeBytes: 12 * mib);
+
+      setUp(() => uploads.partSize = 5 * mib);
+
+      test('envoie chaque morceau, puis confirme', () async {
+        final result = await run(file: big);
+
+        expect(codeOf(result), isNull);
+        expect(uploads.sentParts, [1, 2, 3]);
+        expect(uploads.sends, isEmpty, reason: 'pas de PUT unique');
+        expect(uploads.confirms, ['doc-1']);
+        expect(progress.where((p) => p.resumable), isNotEmpty);
+        final last = progress.lastWhere((p) => p.stage == ImportStage.sending);
+        expect(last.sent, 12 * mib);
+      });
+
+      test('coupure : la reprise n’envoie que les morceaux absents', () async {
+        uploads.partCodes = [null, 'NETWORK_UNAVAILABLE'];
+
+        final result = await run(file: big);
+
+        expect(codeOf(result), isNull);
+        expect(uploads.sentParts, [1, 2, 2, 3], reason: '1 n’est pas renvoyé');
+        expect(uploads.prepares, 2);
+        expect(waits, [ImportDocument.retryDelays.first]);
+        final resumed = progress.firstWhere((p) => p.attempt == 2);
+        expect(resumed.sent, 5 * mib, reason: 'repart des octets reçus');
+      });
+
+      test(
+        'un morceau qui passe remet le compteur de relances à zéro',
+        () async {
+          uploads.partCodes = [
+            'TIMEOUT',
+            null,
+            'TIMEOUT',
+            null,
+            'TIMEOUT',
+            'TIMEOUT',
+            null,
+          ];
+
+          expect(codeOf(await run(file: big)), isNull);
+          expect(uploads.storedParts, {1, 2, 3});
+        },
+      );
+
+      test('trois échecs d’affilée sans progrès arrêtent l’import', () async {
+        uploads.partCodes = List.filled(
+          4,
+          'NETWORK_UNAVAILABLE',
+          growable: true,
+        );
+
+        expect(codeOf(await run(file: big)), 'NETWORK_UNAVAILABLE');
+        expect(uploads.confirms, isEmpty);
+        expect(source.discarded, isEmpty);
+      });
+
+      test(
+        'reprise impossible à préparer puis rétablie ; URL expirée',
+        () async {
+          uploads
+            ..prepareCodes = ['TIMEOUT']
+            ..partCodes = ['FORBIDDEN'];
+
+          expect(codeOf(await run(file: big)), isNull);
+          expect(uploads.prepares, 3);
+          expect(uploads.sentParts, [1, 1, 2, 3]);
+        },
+      );
+
+      test('déjà assemblé (409) : on confirme ; autre refus : rendu', () async {
+        uploads.prepareCodes = ['DOCUMENT_UPLOAD_CONFLICT'];
+        expect(codeOf(await run(file: big)), isNull);
+        expect(uploads.sentParts, isEmpty);
+        expect(uploads.confirms, ['doc-1']);
+
+        uploads.prepareCodes = ['DOCUMENT_NOT_FOUND'];
+        expect(codeOf(await run(file: big)), 'DOCUMENT_NOT_FOUND');
+
+        uploads.partCodes = ['SERVER_ERROR'];
+        expect(codeOf(await run(file: big)), 'SERVER_ERROR');
+      });
+
+      test('tout est déjà reçu : confirmation directe', () async {
+        uploads.storedParts.addAll([1, 2, 3]);
+        expect(codeOf(await run(file: big)), isNull);
+        expect(uploads.sentParts, isEmpty);
+      });
+
+      test('annuler pendant un morceau', () async {
+        uploads.partCodes = ['CANCELLED'];
+        expect(codeOf(await run(file: big)), 'CANCELLED');
+        expect(
+          codeOf(await run(file: big, cancel: Future.value())),
+          'CANCELLED',
+        );
+      });
+
+      test('plan des morceaux', () {
+        expect(PartPlan.offsetOf(3, 5 * mib), 10 * mib);
+        expect(PartPlan.lengthOf(3, 5 * mib, 12 * mib), 2 * mib);
+        expect(PartPlan.lengthOf(1, 5 * mib, 12 * mib), 5 * mib);
+      });
+    });
+
     test('PickPdf choisit et efface', () async {
       source.next = pdf();
       final pick = PickPdf(source);

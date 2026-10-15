@@ -70,9 +70,10 @@ void main() {
       'title': 'Droit civil',
       'sizeBytes': 8,
       'rightsAttested': true,
+      'multipart': true,
     });
     expect(ticket.documentId, 'doc-1');
-    expect(ticket.url.host, 'stockage.test');
+    expect(ticket.url?.host, 'stockage.test');
 
     final sent = <int>[];
     expect(
@@ -95,6 +96,62 @@ void main() {
     expect((await uploads.confirm('doc-1')).isOk, isTrue);
     expect(api.requests.last.path, '/v1/documents/doc-1/upload-confirmation');
     expect(api.requests.last.method, 'POST');
+  });
+
+  test('par morceaux : plan, morceaux manquants, plage du fichier', () async {
+    final api = FakeHttp(
+      (r) => r.path == '/v1/documents'
+          ? reply(201, {
+              'document': {'id': 'doc-2', 'status': 'awaiting_upload'},
+              'upload': null,
+              'multipart': {'partSize': 3, 'partCount': 3},
+            })
+          : reply(200, {
+              'receivedParts': [1],
+              'parts': [
+                {
+                  'partNumber': 2,
+                  'url': 'https://stockage.test/p2?sig=x',
+                  'method': 'PUT',
+                  'headers': {'content-length': '3'},
+                },
+                {
+                  'partNumber': 3,
+                  'url': 'https://stockage.test/p3?sig=x',
+                  'method': 'PUT',
+                  'headers': {'content-length': '2'},
+                },
+              ],
+              'expiresAt': '2026-10-15T12:15:00.000Z',
+            }),
+    );
+    final storage = FakeHttp((_) => reply(200));
+    final uploads = ApiDocumentUploads(api.client(), storageOn(storage));
+
+    final ticket =
+        (await uploads.request(title: 'Gros', sizeBytes: 8)
+                as Ok<UploadTicket, Failure>)
+            .value;
+    expect(api.requests.single.data, containsPair('multipart', true));
+    expect(ticket.byParts, isTrue);
+    expect((ticket.partSize, ticket.partCount, ticket.url), (3, 3, null));
+
+    final parts =
+        (await uploads.prepareParts('doc-2', partSize: 3, fileSize: 8)
+                as Ok<PartsTicket, Failure>)
+            .value;
+    expect(api.requests.last.path, '/v1/documents/doc-2/upload-parts');
+    expect(parts.received, [1]);
+    expect(parts.missing.map((p) => (p.partNumber, p.offset, p.length)), [
+      (2, 3, 3),
+      (3, 6, 2),
+    ]);
+
+    // « %PDF-1.7 » : le morceau 2 = octets 3 à 5.
+    expect((await uploads.sendPart(parts.missing.first, file)).isOk, isTrue);
+    expect(String.fromCharCodes(storage.streamed.single), 'F-1');
+    expect(storage.requests.single.headers['content-length'], '3');
+    expect(storage.requests.single.uri.path, '/p2');
   });
 
   group('SignedUpload', () {

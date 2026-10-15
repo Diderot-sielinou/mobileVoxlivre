@@ -228,7 +228,20 @@ final class FakePdfSource implements PdfSource {
 /// Envois scriptés : chaque appel à [send] prend le prochain code de
 /// [sendCodes] (`null` = réussi) ; [sendGate] retient l'envoi.
 final class FakeUploads implements DocumentUploads {
-  FakeUploads({List<String?>? sendCodes}) : sendCodes = sendCodes ?? [null];
+  FakeUploads({List<String?>? sendCodes, this.partSize})
+    : sendCodes = sendCodes ?? [null];
+
+  /// Envoi par morceaux (ADR-0009) quand renseigné.
+  int? partSize;
+
+  /// Morceaux que « le stockage » a déjà reçus.
+  final storedParts = <int>{};
+
+  /// Codes rendus par chaque `sendPart` (`null` = reçu).
+  List<String?> partCodes = [];
+  List<String?> prepareCodes = [];
+  final sentParts = <int>[];
+  int prepares = 0;
 
   String? requestCode;
   String? confirmCode;
@@ -248,6 +261,15 @@ final class FakeUploads implements DocumentUploads {
   }) async {
     requests.add((title: title, sizeBytes: sizeBytes));
     if (requestCode case final code?) return Result.err(FakeFailure(code));
+    if (partSize case final size?) {
+      return Result.ok(
+        UploadTicket(
+          documentId: 'doc-${requests.length}',
+          partSize: size,
+          partCount: (sizeBytes / size).ceil(),
+        ),
+      );
+    }
     return Result.ok(
       UploadTicket(
         documentId: 'doc-${requests.length}',
@@ -277,6 +299,50 @@ final class FakeUploads implements DocumentUploads {
     final code = sendCodes.isEmpty ? null : sendCodes.removeAt(0);
     if (code != null) return Result.err(FakeFailure(code));
     onProgress?.call(file.sizeBytes);
+    return const Result.ok(null);
+  }
+
+  @override
+  Future<Result<PartsTicket, Failure>> prepareParts(
+    String documentId, {
+    required int partSize,
+    required int fileSize,
+  }) async {
+    prepares++;
+    final code = prepareCodes.isEmpty ? null : prepareCodes.removeAt(0);
+    if (code != null) return Result.err(FakeFailure(code));
+    final count = (fileSize / partSize).ceil();
+    return Result.ok(
+      PartsTicket(
+        received: storedParts.toList()..sort(),
+        missing: [
+          for (var n = 1; n <= count; n++)
+            if (!storedParts.contains(n))
+              UploadPart(
+                partNumber: n,
+                url: Uri.parse('https://stockage.test/part$n'),
+                headers: const {},
+                offset: PartPlan.offsetOf(n, partSize),
+                length: PartPlan.lengthOf(n, partSize, fileSize),
+              ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Future<Result<void, Failure>> sendPart(
+    UploadPart part,
+    PickedPdf file, {
+    void Function(int sent)? onProgress,
+    Future<void>? cancel,
+  }) async {
+    sentParts.add(part.partNumber);
+    onProgress?.call(part.length ~/ 2);
+    final code = partCodes.isEmpty ? null : partCodes.removeAt(0);
+    if (code != null) return Result.err(FakeFailure(code));
+    storedParts.add(part.partNumber);
+    onProgress?.call(part.length);
     return const Result.ok(null);
   }
 

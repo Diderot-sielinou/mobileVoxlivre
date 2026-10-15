@@ -33,6 +33,9 @@ final class ImportDocument {
   /// URL signée refusée par le stockage (expirée).
   static const _expired = 'FORBIDDEN';
 
+  /// Plus d'envoi par morceaux en cours (déjà assemblé).
+  static const _conflict = 'DOCUMENT_UPLOAD_CONFLICT';
+
   Future<Result<String, Failure>> call({
     required PickedPdf file,
     required String title,
@@ -72,6 +75,15 @@ final class ImportDocument {
           ticket = value;
       }
       if (cancelled) return const Result.err(_Cancelled());
+      if (ticket.byParts) {
+        return _sendByParts(
+          ticket,
+          file,
+          onProgress: onProgress,
+          cancel: cancel,
+          isCancelled: () => cancelled,
+        );
+      }
 
       final current = attempt;
       onProgress?.call(
@@ -110,6 +122,126 @@ final class ImportDocument {
     }
   }
 
+  /// Envoi par morceaux (ADR-0009) : on demande ce qui manque, on l'envoie
+  /// ; après une coupure, on redemande — seuls les morceaux absents
+  /// repartent. Trois échecs d'affilée sans progrès arrêtent l'import.
+  Future<Result<String, Failure>> _sendByParts(
+    UploadTicket ticket,
+    PickedPdf file, {
+    required bool Function() isCancelled,
+    void Function(ImportProgress progress)? onProgress,
+    Future<void>? cancel,
+  }) async {
+    final total = file.sizeBytes;
+    final partSize = ticket.partSize!;
+    var failures = 0;
+    var attempt = 1;
+    // Octets déjà reçus par le stockage, dernière valeur connue.
+    var known = 0;
+
+    // Une coupure (ou une URL expirée) : la coupure est annoncée tout de
+    // suite (octets déjà reçus, essai suivant), pause, puis reprise ;
+    // `false` si les relances sont épuisées ou l'import annulé.
+    Future<bool> resume(int received) async {
+      if (failures >= retryDelays.length) return false;
+      onProgress?.call(
+        ImportProgress(
+          ImportStage.sending,
+          sent: received,
+          total: total,
+          attempt: attempt + 1,
+          resumable: true,
+        ),
+      );
+      await _pause(retryDelays[failures], cancel);
+      failures++;
+      attempt++;
+      return !isCancelled();
+    }
+
+    while (true) {
+      if (isCancelled()) return const Result.err(_Cancelled());
+      final prepared = await _uploads.prepareParts(
+        ticket.documentId,
+        partSize: partSize,
+        fileSize: total,
+      );
+      final PartsTicket parts;
+      switch (prepared) {
+        case Err(:final error) when _network.contains(error.code):
+          if (await resume(known)) continue;
+          return isCancelled()
+              ? const Result.err(_Cancelled())
+              : Result.err(error);
+        // Plus d'envoi en cours : déjà assemblé, il ne reste qu'à confirmer.
+        case Err(:final error) when error.code == _conflict:
+          return _confirm(ticket.documentId, file, total, onProgress);
+        case Err(:final error):
+          return Result.err(error);
+        case Ok(:final value):
+          parts = value;
+      }
+      if (parts.missing.isEmpty) {
+        return _confirm(ticket.documentId, file, total, onProgress);
+      }
+
+      var done = parts.received.fold<int>(
+        0,
+        (sum, n) => sum + PartPlan.lengthOf(n, partSize, total),
+      );
+      known = done;
+      var cut = false;
+      for (final part in parts.missing) {
+        final base = done;
+        final current = attempt;
+        onProgress?.call(
+          ImportProgress(
+            ImportStage.sending,
+            sent: base,
+            total: total,
+            attempt: current,
+            resumable: true,
+          ),
+        );
+        final sent = await _uploads.sendPart(
+          part,
+          file,
+          cancel: cancel,
+          onProgress: (bytes) => onProgress?.call(
+            ImportProgress(
+              ImportStage.sending,
+              sent: base + bytes,
+              total: total,
+              attempt: current,
+              resumable: true,
+            ),
+          ),
+        );
+        switch (sent) {
+          case Ok():
+            done += part.length;
+            known = done;
+            failures = 0;
+          case Err(:final error) when error.code == _cancelled || isCancelled():
+            return const Result.err(_Cancelled());
+          case Err(:final error)
+              when _network.contains(error.code) || error.code == _expired:
+            cut = true;
+          case Err(:final error):
+            return Result.err(error);
+        }
+        if (cut) break;
+      }
+      // Tout est parti : pas besoin de redemander, on confirme.
+      if (!cut) return _confirm(ticket.documentId, file, total, onProgress);
+      if (!await resume(done)) {
+        return isCancelled()
+            ? const Result.err(_Cancelled())
+            : const Result.err(_NetworkLost());
+      }
+    }
+  }
+
   Future<Result<String, Failure>> _confirm(
     String documentId,
     PickedPdf file,
@@ -144,4 +276,9 @@ final class ImportDocument {
 
 final class _Cancelled extends Failure {
   const _Cancelled() : super('CANCELLED');
+}
+
+/// Relances épuisées pendant un envoi par morceaux.
+final class _NetworkLost extends Failure {
+  const _NetworkLost() : super('NETWORK_UNAVAILABLE');
 }
