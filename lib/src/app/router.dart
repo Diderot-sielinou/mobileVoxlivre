@@ -10,6 +10,9 @@ import 'package:voxlivre/src/features/auth/presentation/auth_routes.dart';
 import 'package:voxlivre/src/features/auth/presentation/code_screen.dart';
 import 'package:voxlivre/src/features/auth/presentation/sign_in_screen.dart';
 import 'package:voxlivre/src/features/auth/presentation/widgets/account_summary.dart';
+import 'package:voxlivre/src/features/conversion/presentation/conversion_screen.dart';
+import 'package:voxlivre/src/features/conversion/presentation/convert_screen.dart';
+import 'package:voxlivre/src/features/library/library_providers.dart';
 import 'package:voxlivre/src/features/library/presentation/document_screen.dart';
 import 'package:voxlivre/src/features/library/presentation/import_screen.dart';
 import 'package:voxlivre/src/features/library/presentation/library_screen.dart';
@@ -102,8 +105,63 @@ final routerProvider = Provider<GoRouter>((ref) {
                         '${AppRoutes.library}/documents/'
                         '${state.pathParameters['id']}/text',
                       ),
+                      onConvert: (title, chars) => context.push(
+                        Uri(
+                          path:
+                              '${AppRoutes.library}/documents/'
+                              '${state.pathParameters['id']}/convert',
+                          queryParameters: {'title': title, 'chars': '$chars'},
+                        ).toString(),
+                      ),
+                      onOpenConversion: (conversionId) => context.push(
+                        '${AppRoutes.library}/documents/'
+                        '${state.pathParameters['id']}/conversions/'
+                        '$conversionId',
+                      ),
                     ),
                     routes: [
+                      // Passage vers la conversion par la route (ADR-0008).
+                      GoRoute(
+                        path: 'convert',
+                        builder: (context, state) => ConvertScreen(
+                          documentId: state.pathParameters['id']!,
+                          title: state.uri.queryParameters['title'] ?? '',
+                          chars:
+                              int.tryParse(
+                                state.uri.queryParameters['chars'] ?? '',
+                              ) ??
+                              0,
+                          onStarted: (conversionId) {
+                            unawaited(
+                              ref.read(refreshLibraryProvider)(force: true),
+                            );
+                            context.pushReplacement(
+                              Uri(
+                                path:
+                                    '${AppRoutes.library}/documents/'
+                                    '${state.pathParameters['id']}/'
+                                    'conversions/$conversionId',
+                                queryParameters: {
+                                  'title':
+                                      state.uri.queryParameters['title'] ?? '',
+                                },
+                              ).toString(),
+                            );
+                          },
+                        ),
+                      ),
+                      GoRoute(
+                        path: 'conversions/:conversionId',
+                        builder: (context, state) => ConversionScreen(
+                          conversionId: state.pathParameters['conversionId']!,
+                          title: state.uri.queryParameters['title'] ?? '',
+                          onLibrary: () => context.go(AppRoutes.library),
+                          onRetry: context.pop,
+                          onFinished: () => unawaited(
+                            ref.read(refreshLibraryProvider)(force: true),
+                          ),
+                        ),
+                      ),
                       GoRoute(
                         path: 'text',
                         builder: (context, state) => ReviewScreen(

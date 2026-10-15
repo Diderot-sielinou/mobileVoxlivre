@@ -31,6 +31,8 @@ class DocumentScreen extends ConsumerStatefulWidget {
   const DocumentScreen({
     required this.documentId,
     required this.onOpenText,
+    required this.onConvert,
+    required this.onOpenConversion,
     super.key,
   });
 
@@ -38,6 +40,12 @@ class DocumentScreen extends ConsumerStatefulWidget {
 
   /// Ouvre la vérification du texte.
   final VoidCallback onOpenText;
+
+  /// Ouvre le choix de la voix (titre, nombre de caractères : ADR-0008).
+  final void Function(String title, int chars) onConvert;
+
+  /// Ouvre le suivi d'une conversion.
+  final ValueChanged<String> onOpenConversion;
 
   @override
   ConsumerState<DocumentScreen> createState() => _DocumentScreenState();
@@ -200,7 +208,12 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: _BottomAction(sheet: sheet, item: item),
+      bottomNavigationBar: _BottomAction(
+        sheet: sheet,
+        item: item,
+        onConvert: widget.onConvert,
+        onOpenConversion: widget.onOpenConversion,
+      ),
     );
   }
 
@@ -546,13 +559,28 @@ class _ConversionLine extends StatelessWidget {
   }
 }
 
-/// Action principale collée en bas (maquette) : verrouillée tant que la
-/// relecture manque ; les étapes conversion et lecteur l'activeront.
+/// Action principale collée en bas (maquette) : convertir (verrouillé tant
+/// que la relecture manque), suivre une conversion en cours, puis écouter
+/// (étape du lecteur).
 class _BottomAction extends StatelessWidget {
-  const _BottomAction({required this.sheet, required this.item});
+  const _BottomAction({
+    required this.sheet,
+    required this.item,
+    required this.onConvert,
+    required this.onOpenConversion,
+  });
 
   final DocumentSheet? sheet;
   final LibraryItem? item;
+  final void Function(String title, int chars) onConvert;
+  final ValueChanged<String> onOpenConversion;
+
+  static const _converting = {
+    'queued',
+    'preparing',
+    'synthesizing',
+    'synthesized',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -560,25 +588,39 @@ class _BottomAction extends StatelessWidget {
     if (sheet == null || sheet.stage != DocumentStage.textReady) {
       return const SizedBox.shrink();
     }
+    final conversion = item?.conversion;
     final listenable = switch (item?.status) {
       LibraryStatus.ready ||
       LibraryStatus.inProgress ||
       LibraryStatus.finished => true,
       _ => false,
     };
-    final (label, icon, caption) = sheet.reviewPending
-        ? (
-            'Choisir la voix et convertir',
-            Icons.lock_outline,
-            'Après relecture',
-          )
-        : listenable
-        ? ('Écouter', Icons.headphones, 'Disponible avec le lecteur')
-        : (
-            'Choisir la voix et convertir',
-            Icons.graphic_eq,
-            'Disponible à l’étape conversion',
-          );
+    final Widget action;
+    if (sheet.reviewPending) {
+      action = const _Pending(
+        label: 'Choisir la voix et convertir',
+        icon: Icons.lock_outline,
+        caption: 'Après relecture',
+      );
+    } else if (conversion != null && _converting.contains(conversion.status)) {
+      action = VoxPrimaryButton(
+        label: 'Suivre la conversion',
+        icon: Icons.timelapse,
+        onPressed: () => onOpenConversion(conversion.id),
+      );
+    } else if (listenable) {
+      action = const _Pending(
+        label: 'Écouter',
+        icon: Icons.headphones,
+        caption: 'Disponible avec le lecteur',
+      );
+    } else {
+      action = VoxPrimaryButton(
+        label: 'Choisir la voix et convertir',
+        icon: Icons.graphic_eq,
+        onPressed: () => onConvert(sheet.title, sheet.charCount ?? 0),
+      );
+    }
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -587,7 +629,7 @@ class _BottomAction extends StatelessWidget {
           VoxSpacing.screenMargin,
           VoxSpacing.md,
         ),
-        child: _Pending(label: label, icon: icon, caption: caption),
+        child: action,
       ),
     );
   }

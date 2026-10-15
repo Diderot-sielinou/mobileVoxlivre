@@ -95,7 +95,7 @@ void main() {
     );
     semantics.dispose();
     expect(find.text('Choisir la voix et convertir'), findsOneWidget);
-    expect(find.text('Disponible à l’étape conversion'), findsOneWidget);
+    expect(find.text('Disponible à l’étape conversion'), findsNothing);
 
     await tester.tap(find.text('Tout voir (7)'));
     await tester.pumpAndSettle();
