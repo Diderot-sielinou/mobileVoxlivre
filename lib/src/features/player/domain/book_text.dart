@@ -110,6 +110,21 @@ final class BookText {
       words[i].text,
   ].join(' ');
 
+  /// Instant où finit la page du mot à [position] : début du premier mot
+  /// de la page suivante, sinon fin du dernier mot chargé (minuterie « fin
+  /// de la page »).
+  int pageEndMs(int position) {
+    if (words.isEmpty) return 0;
+    final page = pageOf(position < 0 ? 0 : position);
+    final sorted = pageStarts;
+    final at = sorted.indexWhere((s) => s.page == page);
+    if (at >= 0 && at + 1 < sorted.length) {
+      final next = positionOfWord(sorted[at + 1].wordIndex);
+      if (next >= 0) return words[next].startMs;
+    }
+    return words.last.endMs;
+  }
+
   /// Les mots regroupés par page, dans l'ordre : (page, première position,
   /// dernière position incluse).
   List<({int page, int from, int to})> get pages {

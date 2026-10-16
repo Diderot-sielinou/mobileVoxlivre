@@ -151,6 +151,9 @@ abstract interface class AudioEngine {
 
   Future<void> setSpeed(double speed);
 
+  /// Volume de 0 à 1 (fondu de la minuterie de sommeil).
+  Future<void> setVolume(double volume);
+
   /// Instant absolu, émis pendant la lecture.
   Stream<int> get positions;
 

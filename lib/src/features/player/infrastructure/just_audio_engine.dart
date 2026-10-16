@@ -83,6 +83,10 @@ final class JustAudioEngine implements AudioEngine {
   Future<void> setSpeed(double speed) => _player.setSpeed(speed);
 
   @override
+  Future<void> setVolume(double volume) =>
+      _player.setVolume(volume.clamp(0, 1));
+
+  @override
   Stream<int> get positions => _player
       .createPositionStream(
         // Assez fin pour suivre un mot (≈ 300 ms à vitesse 2×).

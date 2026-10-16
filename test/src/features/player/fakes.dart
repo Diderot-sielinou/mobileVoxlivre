@@ -533,6 +533,11 @@ final class FakeAudioEngine implements AudioEngine {
   @override
   Future<void> setSpeed(double value) async => speed = value;
 
+  double volume = 1;
+
+  @override
+  Future<void> setVolume(double value) async => volume = value;
+
   @override
   Stream<int> get positions => _positions.stream;
 

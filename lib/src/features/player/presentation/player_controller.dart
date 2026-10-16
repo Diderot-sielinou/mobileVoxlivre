@@ -217,6 +217,11 @@ final class PlayerController extends Notifier<PlayerViewState> {
       );
   }
 
+  Future<void> pause() => _engine.pause();
+
+  /// Volume (fondu de la minuterie).
+  Future<void> setVolume(double volume) => _engine.setVolume(volume);
+
   /// Lecture ou pause ; en fin de livre, la lecture reprend du début.
   Future<void> toggle() async {
     if (state.playing) return _engine.pause();

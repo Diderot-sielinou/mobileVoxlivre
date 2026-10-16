@@ -8,6 +8,7 @@ import 'package:voxlivre/src/features/player/domain/book_text.dart';
 import 'package:voxlivre/src/features/player/player_providers.dart';
 import 'package:voxlivre/src/features/player/presentation/bookmark_sheets.dart';
 import 'package:voxlivre/src/features/player/presentation/player_controller.dart';
+import 'package:voxlivre/src/features/player/presentation/sleep_timer.dart';
 import 'package:voxlivre/src/shared/design/vox_colors.dart';
 import 'package:voxlivre/src/shared/design/vox_tokens.dart';
 import 'package:voxlivre/src/shared/design/vox_typography.dart';
@@ -130,6 +131,7 @@ extension on _PlayerScreenState {
             ),
           ),
           _Controls(
+            conversionId: widget.conversionId,
             view: view,
             onToggle: _controller.toggle,
             onSeekBy: _controller.seekBy,
@@ -482,6 +484,7 @@ class _PageBlock extends ConsumerWidget {
 /// lecture/pause, +15 s, vitesse.
 class _Controls extends StatelessWidget {
   const _Controls({
+    required this.conversionId,
     required this.view,
     required this.onToggle,
     required this.onSeekBy,
@@ -489,6 +492,7 @@ class _Controls extends StatelessWidget {
     required this.onSpeed,
   });
 
+  final String conversionId;
   final PlayerViewState view;
   final VoidCallback onToggle;
   final ValueChanged<int> onSeekBy;
@@ -575,7 +579,7 @@ class _Controls extends StatelessWidget {
                 onPressed: () => onSeekBy(15000),
                 icon: const _SkipIcon(forward: true),
               ),
-              const SizedBox(width: VoxSizes.minTouchTarget),
+              SleepTimerButton(conversionId: conversionId),
             ],
           ),
         ],
