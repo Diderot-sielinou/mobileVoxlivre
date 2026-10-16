@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:voxlivre/src/app/home_shell.dart';
+import 'package:voxlivre/src/app/resume_payment.dart';
 import 'package:voxlivre/src/features/auth/application/auth_session.dart';
 import 'package:voxlivre/src/features/auth/auth_providers.dart';
 import 'package:voxlivre/src/features/auth/presentation/auth_routes.dart';
@@ -20,6 +21,7 @@ import 'package:voxlivre/src/features/library/presentation/review_screen.dart';
 import 'package:voxlivre/src/features/onboarding/onboarding_providers.dart';
 import 'package:voxlivre/src/features/onboarding/presentation/onboarding_routes.dart';
 import 'package:voxlivre/src/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:voxlivre/src/features/payment/presentation/payment_screen.dart';
 import 'package:voxlivre/src/features/player/player_providers.dart';
 import 'package:voxlivre/src/features/player/presentation/offline_card.dart';
 import 'package:voxlivre/src/features/player/presentation/player_screen.dart';
@@ -30,6 +32,9 @@ abstract final class AppRoutes {
   static const import = '/import';
   static const stats = '/stats';
   static const profile = '/profile';
+
+  /// Parcours de paiement, plein écran (ADR-0013).
+  static const payment = '/payment';
 }
 
 /// Garde de connexion (ADR-0005) : au premier lancement sans session,
@@ -100,8 +105,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
+      // Paiement Mobile Money : rend `true` si des unités ont été ajoutées.
+      GoRoute(
+        path: AppRoutes.payment,
+        builder: (context, state) =>
+            PaymentScreen(onClose: (added) => context.pop(added)),
+      ),
       StatefulShellRoute.indexedStack(
-        builder: (context, state, shell) => HomeShell(shell: shell),
+        builder: (context, state, shell) => ResumePayment(
+          onResume: () => unawaited(context.push(AppRoutes.payment)),
+          child: HomeShell(shell: shell),
+        ),
         branches: [
           StatefulShellBranch(
             routes: [
@@ -191,6 +205,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                                 state.uri.queryParameters['chars'] ?? '',
                               ) ??
                               0,
+                          // Recharge (ADR-0013) ; le solde est relu au retour.
+                          onRecharge: () => context.push<bool>(
+                            AppRoutes.payment,
+                          ),
                           onStarted: (conversionId) {
                             unawaited(
                               ref.read(refreshLibraryProvider)(force: true),

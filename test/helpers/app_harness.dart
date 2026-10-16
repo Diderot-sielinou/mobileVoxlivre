@@ -8,12 +8,14 @@ import 'package:voxlivre/src/features/conversion/conversion_providers.dart';
 import 'package:voxlivre/src/features/library/library_providers.dart';
 import 'package:voxlivre/src/features/onboarding/domain/onboarding_store.dart';
 import 'package:voxlivre/src/features/onboarding/onboarding_providers.dart';
+import 'package:voxlivre/src/features/payment/payment_providers.dart';
 import 'package:voxlivre/src/features/player/player_providers.dart';
 import 'package:voxlivre/src/shared/time/clock_providers.dart';
 
 import '../src/features/auth/fakes.dart';
 import '../src/features/conversion/fakes.dart';
 import '../src/features/library/fakes.dart';
+import '../src/features/payment/fakes.dart';
 import '../src/features/player/fakes.dart';
 
 /// Mémoire du premier lancement, en mémoire.
@@ -57,6 +59,9 @@ typedef Harness = ({
   FakeAudioEngine audio,
   MemoryBookFiles books,
   MemoryBookmarkStore bookmarks,
+  FakePaymentGateway payments,
+  MemoryPaymentMemory paymentMemory,
+  SequenceKeys keys,
 });
 
 /// Lance l'app ; avec [token], la session est déjà ouverte ; [onboarded]
@@ -77,12 +82,17 @@ Future<Harness> pumpVoxlivre(
   FakeAudioEngine? audio,
   MemoryBookFiles? books,
   MemoryBookmarkStore? bookmarks,
+  FakePaymentGateway? payments,
+  MemoryPaymentMemory? paymentMemory,
   bool settle = true,
 }) async {
   final playerGateway = player ?? FakePlayerGateway();
   final bookFiles = books ?? MemoryBookFiles(playerGateway.disk);
   final positionStore = positions ?? MemoryPositionStore();
   final bookmarkStore = bookmarks ?? MemoryBookmarkStore();
+  final paymentGateway = payments ?? FakePaymentGateway();
+  final memory = paymentMemory ?? MemoryPaymentMemory();
+  final keys = SequenceKeys();
   final audioEngine = audio ?? FakeAudioEngine();
   final conversionGateway = conversions ?? FakeConversionGateway();
   final textRepository = texts ?? FakeDocumentTextRepository();
@@ -120,6 +130,9 @@ Future<Harness> pumpVoxlivre(
         bookFilesProvider.overrideWithValue(bookFiles),
         bookmarkStoreProvider.overrideWithValue(bookmarkStore),
         idGeneratorProvider.overrideWithValue(SequenceIds()),
+        paymentGatewayProvider.overrideWithValue(paymentGateway),
+        paymentMemoryProvider.overrideWithValue(memory),
+        keyGeneratorProvider.overrideWithValue(keys),
       ],
       child: const VoxlivreApp(),
     ),
@@ -147,5 +160,8 @@ Future<Harness> pumpVoxlivre(
     audio: audioEngine,
     books: bookFiles,
     bookmarks: bookmarkStore,
+    payments: paymentGateway,
+    paymentMemory: memory,
+    keys: keys,
   );
 }

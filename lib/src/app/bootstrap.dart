@@ -15,6 +15,7 @@ import 'package:voxlivre/src/features/auth/infrastructure/session_token_source.d
 import 'package:voxlivre/src/features/library/library_providers.dart';
 import 'package:voxlivre/src/features/onboarding/infrastructure/prefs_onboarding_store.dart';
 import 'package:voxlivre/src/features/onboarding/onboarding_providers.dart';
+import 'package:voxlivre/src/features/payment/payment_providers.dart';
 import 'package:voxlivre/src/features/player/player_providers.dart';
 import 'package:voxlivre/src/shared/http/api_client.dart';
 import 'package:voxlivre/src/shared/http/http_providers.dart';
@@ -65,6 +66,7 @@ Future<void> bootstrap() async {
     container.read(clearPositionsProvider).call,
     container.read(clearDownloadsProvider).call,
     container.read(clearBookmarksProvider).call,
+    container.read(clearPaymentMemoryProvider).call,
   ]);
   unawaited(container.read(restoreSessionProvider)());
   // Écrits hors ligne lors d'une session précédente (ADR-0011, ADR-0012).

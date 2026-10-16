@@ -107,6 +107,22 @@ void main() {
       await client.delete('/a', decode: (_) => null);
       expect(adapter.last!.method, 'DELETE');
       expect(adapter.last!.data, isNull);
+
+      await client.delete('/a', query: {'at': 'x'}, decode: (_) => null);
+      expect(adapter.last!.queryParameters, {'at': 'x'});
+    });
+
+    test('POST avec un en-tête en plus (Idempotency-Key)', () async {
+      final (:client, :adapter) = _client((_) async => _body('{}', 202));
+
+      await client.post(
+        '/v1/payments',
+        body: {'x': 1},
+        headers: {'Idempotency-Key': 'cle-12345678'},
+        decode: (_) => null,
+      );
+      expect(adapter.last!.headers['Idempotency-Key'], 'cle-12345678');
+      expect(adapter.last!.headers['x-request-id'], isNotNull);
     });
 
     test('un corps vide (204) est décodé comme null', () async {

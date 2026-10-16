@@ -43,6 +43,7 @@ class ConvertScreen extends ConsumerStatefulWidget {
     required this.title,
     required this.chars,
     required this.onStarted,
+    this.onRecharge,
     super.key,
   });
 
@@ -51,6 +52,10 @@ class ConvertScreen extends ConsumerStatefulWidget {
   final int chars;
   final ValueChanged<String> onStarted;
 
+  /// Ouvre le paiement (ADR-0013), fourni par le routeur ; au retour, le
+  /// solde est relu.
+  final Future<void> Function()? onRecharge;
+
   @override
   ConsumerState<ConvertScreen> createState() => _ConvertScreenState();
 }
@@ -58,6 +63,12 @@ class ConvertScreen extends ConsumerStatefulWidget {
 class _ConvertScreenState extends ConsumerState<ConvertScreen> {
   ConvertController get _controller =>
       ref.read(convertControllerProvider(widget.documentId).notifier);
+
+  Future<void> _recharge() async {
+    await widget.onRecharge!();
+    // Payé ou non : le solde a pu changer (paiement conclu plus tard).
+    if (mounted) await _controller.load();
+  }
 
   @override
   void initState() {
@@ -143,6 +154,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
                   voice,
                 ),
                 onChoose: _controller.choose,
+                onRecharge: widget.onRecharge == null ? null : _recharge,
               ),
               const SizedBox(height: VoxSpacing.md),
             ],
@@ -314,6 +326,7 @@ class _Shortfall extends StatelessWidget {
     required this.voice,
     required this.standard,
     required this.onChoose,
+    required this.onRecharge,
   });
 
   final int missing;
@@ -322,6 +335,9 @@ class _Shortfall extends StatelessWidget {
   final Voice voice;
   final Voice? standard;
   final ValueChanged<String> onChoose;
+
+  /// `null` : paiement indisponible.
+  final VoidCallback? onRecharge;
 
   @override
   Widget build(BuildContext context) {
@@ -370,14 +386,14 @@ class _Shortfall extends StatelessWidget {
               ),
             ],
             const SizedBox(height: VoxSpacing.sm),
-            const VoxPrimaryButton(
+            VoxPrimaryButton(
               label: 'Recharger des unités',
               icon: Icons.bolt,
-              onPressed: null,
+              onPressed: onRecharge,
             ),
             const SizedBox(height: VoxSpacing.xs),
             Text(
-              'Disponible à l’étape paiement (Mobile Money).',
+              'Par Orange Money ou MTN MoMo.',
               textAlign: TextAlign.center,
               style: text.bodySmall,
             ),

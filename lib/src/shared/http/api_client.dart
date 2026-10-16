@@ -55,12 +55,14 @@ final class ApiClient {
     Map<String, Object?>? query,
   }) => _send('GET', path, decode, query: query);
 
-  /// `POST` de [body] (encodé en JSON) vers [path].
+  /// `POST` de [body] (encodé en JSON) vers [path] ; [headers] en plus
+  /// (`Idempotency-Key`…), jamais journalisés.
   Future<Result<T, ApiFailure>> post<T>(
     String path, {
     required Decode<T> decode,
     Object? body,
-  }) => _send('POST', path, decode, body: body);
+    Map<String, String>? headers,
+  }) => _send('POST', path, decode, body: body, headers: headers);
 
   /// `PATCH` de [body] (encodé en JSON) vers [path].
   Future<Result<T, ApiFailure>> patch<T>(
@@ -89,10 +91,19 @@ final class ApiClient {
     Decode<T> decode, {
     Object? body,
     Map<String, Object?>? query,
+    Map<String, String>? headers,
   }) async {
     final requestId = _requestId();
     final watch = Stopwatch()..start();
-    final result = await _attempt(method, path, decode, requestId, body, query);
+    final result = await _attempt(
+      method,
+      path,
+      decode,
+      requestId,
+      body,
+      query,
+      headers,
+    );
     // Chemin sans paramètres, jamais de corps ni d'en-tête : aucune donnée
     // personnelle dans les journaux.
     final outcome = switch (result) {
@@ -113,6 +124,7 @@ final class ApiClient {
     String requestId,
     Object? body,
     Map<String, Object?>? query,
+    Map<String, String>? headers,
   ) async {
     final token = _tokens?.token;
     try {
@@ -123,6 +135,7 @@ final class ApiClient {
         options: Options(
           method: method,
           headers: {
+            ...?headers,
             'x-request-id': requestId,
             if (token != null) 'authorization': 'Bearer $token',
           },

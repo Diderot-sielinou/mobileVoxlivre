@@ -101,10 +101,7 @@ void main() {
     );
     expect(find.textContaining('(voix standard seulement)'), findsOneWidget);
     expect(find.text('Aucune unité n’a été décomptée.'), findsOneWidget);
-    expect(
-      find.text('Disponible à l’étape paiement (Mobile Money).'),
-      findsOneWidget,
-    );
+    expect(find.text('Par Orange Money ou MTN MoMo.'), findsOneWidget);
 
     await tester.tap(find.text('Passer en voix standard (Amina)'));
     await tester.pumpAndSettle();

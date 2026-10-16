@@ -56,4 +56,37 @@ abstract final class VoxFormat {
     if (d.inDays == 1) return 'hier';
     return 'il y a ${d.inDays} jours';
   }
+
+  static const _months = [
+    'janvier',
+    'février',
+    'mars',
+    'avril',
+    'mai',
+    'juin',
+    'juillet',
+    'août',
+    'septembre',
+    'octobre',
+    'novembre',
+    'décembre',
+  ];
+
+  /// Jour, à l'heure du téléphone : « 15 novembre » (« 1er » le premier).
+  static String day(DateTime at) {
+    final local = at.toLocal();
+    final day = local.day == 1 ? '1er' : '${local.day}';
+    return '$day ${_months[local.month - 1]}';
+  }
+
+  /// Date et heure : « 16 octobre 2026 à 14:38 ».
+  static String dateTime(DateTime at) {
+    final local = at.toLocal();
+    final hh = local.hour.toString().padLeft(2, '0');
+    final mm = local.minute.toString().padLeft(2, '0');
+    return '${day(local)} ${local.year} à $hh:$mm';
+  }
+
+  /// Montant : « 2 000 FCFA ».
+  static String xaf(int amount) => '${count(amount)} FCFA';
 }
