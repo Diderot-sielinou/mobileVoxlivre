@@ -132,9 +132,8 @@ void main() {
     await leave(tester);
   });
 
-  testWidgets('fin du livre : pause, une sauvegarde ; relecture du début', (
-    tester,
-  ) async {
+  testWidgets('fin du livre : pause, une sauvegarde, « Livre terminé » ; '
+      'le moteur revient au début sans changer la position', (tester) async {
     final h = await open(tester);
     await tester.tap(find.byTooltip('Lecture'));
     await tester.pump();
@@ -143,17 +142,74 @@ void main() {
       ..emit(8040)
       ..finish();
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Lecture'), findsOneWidget);
-    expect(find.text('0:08'), findsOneWidget, reason: 'borné à la durée');
-    expect(h.positions.position?.audioMs, 8000);
+    expect(find.text('Livre terminé !'), findsOneWidget);
+    expect(find.text('pages'), findsOneWidget);
+    expect(h.positions.position?.audioMs, 8000, reason: 'fin enregistrée');
+    expect(h.audio.seeks.last, 0, reason: '▶ de la notification relance');
+    // Le moteur, revenu au début, émet 0 : ni l'écran ni la position ne
+    // bougent tant qu'on n'écoute pas.
+    h.audio.emit(0);
     final saves = h.player.saved.length;
     await tester.pump(positionSaveEvery * 2);
     expect(h.player.saved, hasLength(saves), reason: 'plus d’envoi en boucle');
+
+    await tester.tap(find.byTooltip('Fermer'));
+    await tester.pumpAndSettle();
+    expect(find.text('0:08'), findsOneWidget);
+    expect(find.byTooltip('Lecture'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Lecture'));
     await tester.pump();
     expect(h.audio.seeks.last, 0);
     expect(find.byTooltip('Pause'), findsOneWidget);
+    await leave(tester);
+  });
+
+  testWidgets('fin du livre : ▶ de la notification relance du début', (
+    tester,
+  ) async {
+    final h = await open(tester);
+    await tester.tap(find.byTooltip('Lecture'));
+    await tester.pump();
+    h.audio
+      ..emit(8040)
+      ..finish();
+    await tester.pumpAndSettle();
+
+    // La notification joue le moteur directement.
+    await h.audio.play();
+    h.audio.emit(1500);
+    await tester.pumpAndSettle();
+    expect(find.text('Livre terminé !'), findsNothing);
+    expect(find.text('0:01'), findsOneWidget);
+    await leave(tester);
+  });
+
+  testWidgets('« Revenir au début » et « Choisir mon prochain livre »', (
+    tester,
+  ) async {
+    final h = await open(tester);
+    await tester.tap(find.byTooltip('Lecture'));
+    await tester.pump();
+    h.audio
+      ..emit(8040)
+      ..finish();
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Supprimer l’audio'), findsNothing);
+
+    await tester.tap(find.text('Revenir au début'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Pause'), findsOneWidget);
+    expect(find.text('0:00'), findsOneWidget);
+
+    h.audio
+      ..emit(8040)
+      ..finish();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choisir mon prochain livre'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PlayerScreen), findsNothing);
+    expect(find.widgetWithText(AppBar, 'Bibliothèque'), findsOneWidget);
     await leave(tester);
   });
 

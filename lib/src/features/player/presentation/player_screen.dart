@@ -6,7 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxlivre/src/features/player/domain/book_text.dart';
 import 'package:voxlivre/src/features/player/player_providers.dart';
+import 'package:voxlivre/src/features/player/presentation/book_finished.dart';
 import 'package:voxlivre/src/features/player/presentation/bookmark_sheets.dart';
+import 'package:voxlivre/src/features/player/presentation/offline_card.dart';
 import 'package:voxlivre/src/features/player/presentation/player_controller.dart';
 import 'package:voxlivre/src/features/player/presentation/sleep_timer.dart';
 import 'package:voxlivre/src/shared/design/vox_colors.dart';
@@ -37,11 +39,15 @@ class PlayerScreen extends ConsumerStatefulWidget {
   const PlayerScreen({
     required this.conversionId,
     required this.title,
+    this.onChooseNext,
     super.key,
   });
 
   final String conversionId;
   final String title;
+
+  /// « Choisir mon prochain livre », en fin de livre.
+  final VoidCallback? onChooseNext;
 
   @override
   ConsumerState<PlayerScreen> createState() => _PlayerScreenState();
@@ -67,6 +73,14 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
     final page = text == null || view.wordPosition < 0
         ? null
         : text.pageOf(view.wordPosition);
+    final downloaded =
+        ref
+            .watch(downloadedBooksProvider)
+            .value
+            ?.contains(
+              widget.conversionId,
+            ) ??
+        false;
     return Scaffold(
       backgroundColor: colors.background,
       extendBodyBehindAppBar: true,
@@ -90,7 +104,18 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
             ..._bookmarkActions(documentId, page, view.wordPosition),
         ],
       ),
-      body: _reading(view),
+      body: view.finished && text != null
+          ? BookFinished(
+              title: widget.title,
+              durationMs: view.durationMs,
+              pageCount: text.pageStarts.isEmpty ? 1 : text.pageStarts.length,
+              onClose: _controller.dismissFinished,
+              onRestart: _controller.restart,
+              onChooseNext: widget.onChooseNext,
+              downloadedBytes: downloaded ? view.bookBytes : null,
+              onRemoveDownload: _removeDownload,
+            )
+          : _reading(view),
     );
   }
 }
@@ -145,6 +170,21 @@ extension on _PlayerScreenState {
       decoration: const BoxDecoration(gradient: VoxGradients.nuit),
       child: SafeArea(child: content),
     );
+  }
+
+  /// Fin du livre : l'audio quitte le téléphone (confirmation), puis on
+  /// ferme le lecteur (ses fichiers n'existent plus).
+  Future<void> _removeDownload() async {
+    if (!await confirmRemoveDownload(context, widget.title) || !mounted) {
+      return;
+    }
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    await ref.read(removeDownloadProvider)(widget.conversionId);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Audio supprimé du téléphone')),
+    );
+    navigator.pop();
   }
 
   /// Poser un marque-page (icône pleine si la page en a déjà un), et la

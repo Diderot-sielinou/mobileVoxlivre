@@ -128,6 +128,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                       key: ValueKey(state.pathParameters['conversionId']),
                       conversionId: state.pathParameters['conversionId']!,
                       title: state.uri.queryParameters['title'] ?? '',
+                      // Fin du livre : retour à la bibliothèque.
+                      onChooseNext: () => context.go(AppRoutes.library),
                     ),
                   ),
                   GoRoute(

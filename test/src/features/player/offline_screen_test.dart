@@ -206,4 +206,30 @@ void main() {
     expect(offlineInterruptionTitle('DOWNLOAD_CORRUPT'), contains('abîmé'));
     expect(offlineInterruptionTitle('X'), 'Téléchargement interrompu');
   });
+
+  testWidgets('fin d’un livre téléchargé : libérer la place, lecteur fermé', (
+    tester,
+  ) async {
+    final h = await sheetOf(tester);
+    await tester.tap(find.text('Télécharger'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Écouter'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Lecture'));
+    await tester.pump();
+    h.audio
+      ..emit(8040)
+      ..finish();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('Supprimer l’audio pour libérer'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Supprimer'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PlayerScreen), findsNothing);
+    expect(find.text('Audio supprimé du téléphone'), findsOneWidget);
+    expect(await h.books.read('c-1'), isNull);
+    await leave(tester);
+  });
 }

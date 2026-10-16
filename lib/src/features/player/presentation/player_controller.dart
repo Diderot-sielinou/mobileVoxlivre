@@ -6,6 +6,7 @@ import 'package:voxlivre/src/core/result.dart';
 import 'package:voxlivre/src/features/player/domain/book_text.dart';
 import 'package:voxlivre/src/features/player/domain/bookmark.dart';
 import 'package:voxlivre/src/features/player/domain/manifest.dart';
+import 'package:voxlivre/src/features/player/domain/offline_book.dart';
 import 'package:voxlivre/src/features/player/domain/player_ports.dart';
 import 'package:voxlivre/src/features/player/player_providers.dart';
 import 'package:voxlivre/src/shared/time/clock_providers.dart';
@@ -36,6 +37,8 @@ final class PlayerViewState {
     this.partsReady = 0,
     this.partCount = 0,
     this.documentId,
+    this.finished = false,
+    this.bookBytes = 0,
   });
 
   final bool loading;
@@ -57,6 +60,13 @@ final class PlayerViewState {
   /// Document du livre : ses marque-pages (ADR-0012).
   final String? documentId;
 
+  /// Livre écouté jusqu'au bout : l'écran « Livre terminé ».
+  final bool finished;
+
+  /// Taille de l'audio et des WebVTT du livre (place libérée en le
+  /// retirant du téléphone).
+  final int bookBytes;
+
   PlayerViewState copyWith({
     bool? loading,
     String? errorCode,
@@ -70,6 +80,8 @@ final class PlayerViewState {
     int? partsReady,
     int? partCount,
     String? documentId,
+    bool? finished,
+    int? bookBytes,
   }) => PlayerViewState(
     loading: loading ?? this.loading,
     errorCode: errorCode ?? this.errorCode,
@@ -83,6 +95,8 @@ final class PlayerViewState {
     partsReady: partsReady ?? this.partsReady,
     partCount: partCount ?? this.partCount,
     documentId: documentId ?? this.documentId,
+    finished: finished ?? this.finished,
+    bookBytes: bookBytes ?? this.bookBytes,
   );
 }
 
@@ -100,6 +114,10 @@ final class PlayerController extends Notifier<PlayerViewState> {
   Manifest? _manifest;
   int _lastLoadedIndex = -1;
   String _title = '';
+
+  /// Fin atteinte : le moteur est revenu au début sans que la position
+  /// affichée (et enregistrée) bouge, jusqu'à la prochaine lecture.
+  bool _atEnd = false;
 
   /// Copie de la dernière position : `state` est illisible pendant la
   /// libération.
@@ -163,6 +181,7 @@ final class PlayerController extends Notifier<PlayerViewState> {
           partsReady: session.parts.length,
           partCount: session.manifest.partCount,
           documentId: session.manifest.documentId,
+          bookBytes: manifestBytes(session.manifest),
         );
         // Marque-pages : envoi de ceux en attente, relecture du serveur.
         unawaited(
@@ -182,7 +201,7 @@ final class PlayerController extends Notifier<PlayerViewState> {
       ..add(
         _engine.positions.listen((raw) {
           final text = state.text;
-          if (text == null) return;
+          if (text == null || (_atEnd && !state.playing)) return;
           // La fin du fichier peut dépasser la durée annoncée de quelques ms.
           final ms = raw.clamp(0, state.durationMs);
           final word = text.positionAt(ms);
@@ -196,7 +215,12 @@ final class PlayerController extends Notifier<PlayerViewState> {
       ..add(
         _engine.playingChanges.listen((playing) {
           if (playing == state.playing) return;
-          state = state.copyWith(playing: playing);
+          // Relancé après la fin (bouton de l'app ou de la notification).
+          if (playing) _atEnd = false;
+          state = state.copyWith(
+            playing: playing,
+            finished: playing ? false : null,
+          );
           _saveTimer?.cancel();
           if (playing) {
             _saveTimer = Timer.periodic(positionSaveEvery, (_) {
@@ -208,13 +232,32 @@ final class PlayerController extends Notifier<PlayerViewState> {
         }),
       )
       // Fin du livre : le moteur reste « en lecture » ; on le met en pause
-      // (ce qui enregistre la position, une seule fois).
-      ..add(
-        _engine.completed.listen((_) {
-          state = state.copyWith(positionMs: state.durationMs);
-          unawaited(_engine.pause());
-        }),
-      );
+      // (ce qui enregistre la position de fin, une seule fois), puis il
+      // revient au début sans bruit : ▶, ici ou dans la notification,
+      // relance le livre.
+      ..add(_engine.completed.listen((_) => unawaited(_complete())));
+  }
+
+  Future<void> _complete() async {
+    _atEnd = true;
+    state = state.copyWith(
+      positionMs: state.durationMs,
+      wordPosition: state.text?.positionAt(state.durationMs),
+      // Un aperçu n'est pas fini : la suite arrive.
+      finished: state.complete,
+    );
+    await _engine.pause();
+    await _engine.seek(0);
+  }
+
+  /// Ferme l'écran « Livre terminé ».
+  void dismissFinished() => state = state.copyWith(finished: false);
+
+  /// Revenir au début et écouter.
+  Future<void> restart() async {
+    state = state.copyWith(finished: false);
+    await seekTo(0);
+    await _engine.play();
   }
 
   Future<void> pause() => _engine.pause();
