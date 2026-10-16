@@ -1,0 +1,65 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:voxlivre/src/features/player/application/clear_positions.dart';
+import 'package:voxlivre/src/features/player/application/load_parts.dart';
+import 'package:voxlivre/src/features/player/application/open_book.dart';
+import 'package:voxlivre/src/features/player/application/save_position.dart';
+import 'package:voxlivre/src/features/player/domain/player_ports.dart';
+import 'package:voxlivre/src/features/player/infrastructure/api_player_gateway.dart';
+import 'package:voxlivre/src/features/player/infrastructure/drift_position_store.dart';
+import 'package:voxlivre/src/features/player/infrastructure/just_audio_engine.dart';
+import 'package:voxlivre/src/features/player/infrastructure/player_database.dart';
+import 'package:voxlivre/src/shared/http/http_providers.dart';
+import 'package:voxlivre/src/shared/time/clock_providers.dart';
+
+/// Composition du lecteur (ADR-0002, ADR-0010).
+
+/// Base locale `player.sqlite`, fermée avec l'app.
+final playerDatabaseProvider = Provider<PlayerDatabase>((ref) {
+  final db = PlayerDatabase.open();
+  ref.onDispose(db.close);
+  return db;
+});
+
+final positionStoreProvider = Provider<PositionStore>(
+  (ref) => DriftPositionStore(ref.watch(playerDatabaseProvider)),
+);
+
+final playerGatewayProvider = Provider<PlayerGateway>(
+  (ref) => ApiPlayerGateway(
+    ref.watch(apiClientProvider),
+    ref.watch(signedDownloadProvider),
+  ),
+);
+
+/// Un moteur par lecteur ouvert, libéré à sa fermeture.
+// Type de fournisseur non exporté par flutter_riverpod 3 : il est inféré.
+// ignore: specify_nonobvious_property_types
+final audioEngineProvider = Provider.autoDispose<AudioEngine>((ref) {
+  final engine = JustAudioEngine();
+  ref.onDispose(engine.dispose);
+  return engine;
+});
+
+final loadPartsProvider = Provider<LoadParts>(
+  (ref) => LoadParts(ref.watch(playerGatewayProvider)),
+);
+
+final openBookProvider = Provider<OpenBook>(
+  (ref) => OpenBook(
+    ref.watch(playerGatewayProvider),
+    ref.watch(positionStoreProvider),
+    ref.watch(loadPartsProvider),
+  ),
+);
+
+final savePositionProvider = Provider<SavePosition>(
+  (ref) => SavePosition(
+    ref.watch(positionStoreProvider),
+    ref.watch(playerGatewayProvider),
+    ref.watch(clockProvider),
+  ),
+);
+
+final clearPositionsProvider = Provider<ClearPositions>(
+  (ref) => ClearPositions(ref.watch(positionStoreProvider)),
+);

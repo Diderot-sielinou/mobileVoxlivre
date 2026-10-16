@@ -23,6 +23,7 @@ class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({
     required this.onImport,
     required this.onOpenDocument,
+    required this.onListen,
     super.key,
   });
 
@@ -31,6 +32,9 @@ class LibraryScreen extends ConsumerStatefulWidget {
 
   /// Ouvre la fiche d'un document.
   final ValueChanged<String> onOpenDocument;
+
+  /// Ouvre le lecteur d'une conversion (ADR-0010).
+  final void Function(String conversionId, String title) onListen;
 
   @override
   ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
@@ -145,7 +149,16 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     return [
       if (banner != null) ...[banner, const SizedBox(height: VoxSpacing.md)],
       if (resume != null) ...[
-        ResumeCard(item: resume),
+        ResumeCard(
+          item: resume,
+          onTap: switch (resume.conversion) {
+            final conversion? => () => widget.onListen(
+              conversion.id,
+              resume.title,
+            ),
+            null => null,
+          },
+        ),
         const SizedBox(height: VoxSpacing.lg),
       ],
       _Filters(

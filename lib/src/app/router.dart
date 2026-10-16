@@ -20,6 +20,7 @@ import 'package:voxlivre/src/features/library/presentation/review_screen.dart';
 import 'package:voxlivre/src/features/onboarding/onboarding_providers.dart';
 import 'package:voxlivre/src/features/onboarding/presentation/onboarding_routes.dart';
 import 'package:voxlivre/src/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:voxlivre/src/features/player/presentation/player_screen.dart';
 
 /// Chemins des onglets : une constante par route, jamais de chaîne répétée.
 abstract final class AppRoutes {
@@ -50,12 +51,25 @@ GoRoute _tab(String path, String title, [Widget? child]) => GoRoute(
   builder: (context, state) => PlaceholderPage(title: title, child: child),
 );
 
+/// Ouvre le lecteur d'une conversion (ADR-0010).
+void _listen(BuildContext context, String conversionId, String title) =>
+    unawaited(
+      context.push(
+        Uri(
+          path: '${AppRoutes.library}/listen/$conversionId',
+          queryParameters: {'title': title},
+        ).toString(),
+      ),
+    );
+
 /// Routeur de l'app, rafraîchi à chaque changement de session.
 final routerProvider = Provider<GoRouter>((ref) {
   final session = ref.watch(authSessionProvider);
   final onboarding = ref.watch(onboardingStoreProvider);
   final refresh = _StreamListenable(session.changes);
+  final root = GlobalKey<NavigatorState>();
   final router = GoRouter(
+    navigatorKey: root,
     initialLocation: AppRoutes.library,
     refreshListenable: refresh,
     redirect: (context, state) => guard(
@@ -91,8 +105,21 @@ final routerProvider = Provider<GoRouter>((ref) {
                   onImport: () => context.go(AppRoutes.import),
                   onOpenDocument: (id) =>
                       context.push('${AppRoutes.library}/documents/$id'),
+                  onListen: (conversionId, title) =>
+                      _listen(context, conversionId, title),
                 ),
                 routes: [
+                  // Lecteur (ADR-0010), ouvert par la route comme la
+                  // conversion (ADR-0008). Plein écran : au-dessus du shell.
+                  GoRoute(
+                    path: 'listen/:conversionId',
+                    parentNavigatorKey: root,
+                    builder: (context, state) => PlayerScreen(
+                      key: ValueKey(state.pathParameters['conversionId']),
+                      conversionId: state.pathParameters['conversionId']!,
+                      title: state.uri.queryParameters['title'] ?? '',
+                    ),
+                  ),
                   GoRoute(
                     path: 'documents/:id',
                     // Une clé par document : passer d'une fiche à une autre
@@ -118,6 +145,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                         '${state.pathParameters['id']}/conversions/'
                         '$conversionId',
                       ),
+                      onListen: (conversionId, title) =>
+                          _listen(context, conversionId, title),
                     ),
                     routes: [
                       // Passage vers la conversion par la route (ADR-0008).
@@ -157,6 +186,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                           title: state.uri.queryParameters['title'] ?? '',
                           onLibrary: () => context.go(AppRoutes.library),
                           onRetry: context.pop,
+                          onListen: () => _listen(
+                            context,
+                            state.pathParameters['conversionId']!,
+                            state.uri.queryParameters['title'] ?? '',
+                          ),
                           onFinished: () => unawaited(
                             ref.read(refreshLibraryProvider)(force: true),
                           ),

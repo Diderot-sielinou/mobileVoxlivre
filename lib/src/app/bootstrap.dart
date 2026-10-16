@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:voxlivre/src/app/app_config.dart';
 import 'package:voxlivre/src/app/session_effects.dart';
 import 'package:voxlivre/src/app/voxlivre_app.dart';
@@ -14,6 +15,7 @@ import 'package:voxlivre/src/features/auth/infrastructure/session_token_source.d
 import 'package:voxlivre/src/features/library/library_providers.dart';
 import 'package:voxlivre/src/features/onboarding/infrastructure/prefs_onboarding_store.dart';
 import 'package:voxlivre/src/features/onboarding/onboarding_providers.dart';
+import 'package:voxlivre/src/features/player/player_providers.dart';
 import 'package:voxlivre/src/shared/http/api_client.dart';
 import 'package:voxlivre/src/shared/http/http_providers.dart';
 import 'package:voxlivre/src/shared/logging/app_logging.dart';
@@ -24,6 +26,12 @@ import 'package:voxlivre/src/shared/logging/app_logging.dart';
 /// vérifiée auprès du backend **après** le premier écran (ADR-0005).
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Lecteur en arrière-plan : notification et écran verrouillé (ADR-0010).
+  await JustAudioBackground.init(
+    androidNotificationChannelId: 'store.voxlivre.app.audio',
+    androidNotificationChannelName: 'Lecture',
+    androidNotificationOngoing: true,
+  );
   // Journaux en debug seulement : rien ne sort d'un téléphone en release.
   configureLogging(enabled: kDebugMode);
   final config = switch (AppConfig.fromEnvironment()) {
@@ -52,7 +60,10 @@ Future<void> bootstrap() async {
       ),
     ],
   );
-  clearAccountDataOnSignOut(session, container.read(clearLibraryProvider));
+  clearAccountDataOnSignOut(session, [
+    container.read(clearLibraryProvider).call,
+    container.read(clearPositionsProvider).call,
+  ]);
   unawaited(container.read(restoreSessionProvider)());
 
   runApp(

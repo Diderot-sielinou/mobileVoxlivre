@@ -8,11 +8,13 @@ import 'package:voxlivre/src/features/conversion/conversion_providers.dart';
 import 'package:voxlivre/src/features/library/library_providers.dart';
 import 'package:voxlivre/src/features/onboarding/domain/onboarding_store.dart';
 import 'package:voxlivre/src/features/onboarding/onboarding_providers.dart';
+import 'package:voxlivre/src/features/player/player_providers.dart';
 import 'package:voxlivre/src/shared/time/clock_providers.dart';
 
 import '../src/features/auth/fakes.dart';
 import '../src/features/conversion/fakes.dart';
 import '../src/features/library/fakes.dart';
+import '../src/features/player/fakes.dart';
 
 /// Mémoire du premier lancement, en mémoire.
 final class MemoryOnboardingStore implements OnboardingStore {
@@ -50,6 +52,9 @@ typedef Harness = ({
   FakeUploads uploads,
   FakeDocumentTextRepository texts,
   FakeConversionGateway conversions,
+  FakePlayerGateway player,
+  MemoryPositionStore positions,
+  FakeAudioEngine audio,
 });
 
 /// Lance l'app ; avec [token], la session est déjà ouverte ; [onboarded]
@@ -65,8 +70,14 @@ Future<Harness> pumpVoxlivre(
   FakeUploads? uploads,
   FakeDocumentTextRepository? texts,
   FakeConversionGateway? conversions,
+  FakePlayerGateway? player,
+  MemoryPositionStore? positions,
+  FakeAudioEngine? audio,
   bool settle = true,
 }) async {
+  final playerGateway = player ?? FakePlayerGateway();
+  final positionStore = positions ?? MemoryPositionStore();
+  final audioEngine = audio ?? FakeAudioEngine();
   final conversionGateway = conversions ?? FakeConversionGateway();
   final textRepository = texts ?? FakeDocumentTextRepository();
   final pdfSource = pdfs ?? FakePdfSource();
@@ -97,6 +108,9 @@ Future<Harness> pumpVoxlivre(
         documentUploadsProvider.overrideWithValue(uploader),
         documentTextRepositoryProvider.overrideWithValue(textRepository),
         conversionGatewayProvider.overrideWithValue(conversionGateway),
+        playerGatewayProvider.overrideWithValue(playerGateway),
+        positionStoreProvider.overrideWithValue(positionStore),
+        audioEngineProvider.overrideWithValue(audioEngine),
       ],
       child: const VoxlivreApp(),
     ),
@@ -119,5 +133,8 @@ Future<Harness> pumpVoxlivre(
     uploads: uploader,
     texts: textRepository,
     conversions: conversionGateway,
+    player: playerGateway,
+    positions: positionStore,
+    audio: audioEngine,
   );
 }

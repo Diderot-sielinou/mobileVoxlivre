@@ -32,6 +32,7 @@ class ConversionScreen extends ConsumerStatefulWidget {
     required this.title,
     required this.onLibrary,
     required this.onRetry,
+    required this.onListen,
     this.onFinished,
     super.key,
   });
@@ -42,6 +43,9 @@ class ConversionScreen extends ConsumerStatefulWidget {
 
   /// Échec : revenir choisir une voix.
   final VoidCallback onRetry;
+
+  /// Prête : ouvrir le lecteur (ADR-0010).
+  final VoidCallback onListen;
 
   /// La conversion vient de se terminer (prête ou en échec).
   final VoidCallback? onFinished;
@@ -178,16 +182,10 @@ class _ConversionScreenState extends ConsumerState<ConversionScreen> {
             ],
             if (stage == ConversionStage.ready) ...[
               const SizedBox(height: VoxSpacing.md),
-              const VoxPrimaryButton(
+              VoxPrimaryButton(
                 label: 'Écouter',
                 icon: Icons.headphones,
-                onPressed: null,
-              ),
-              const SizedBox(height: VoxSpacing.xs),
-              Text(
-                'Disponible avec le lecteur.',
-                textAlign: TextAlign.center,
-                style: text.bodySmall,
+                onPressed: widget.onListen,
               ),
             ],
             const SizedBox(height: VoxSpacing.lg),

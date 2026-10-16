@@ -104,7 +104,7 @@ void main() {
     await leave(tester);
   });
 
-  testWidgets('un livre prêt propose d’écouter (à l’étape du lecteur)', (
+  testWidgets('un livre prêt propose d’écouter', (
     tester,
   ) async {
     await open(
@@ -115,7 +115,7 @@ void main() {
     );
 
     expect(find.text('Écouter'), findsOneWidget);
-    expect(find.text('Disponible avec le lecteur'), findsOneWidget);
+    expect(find.text('Disponible avec le lecteur'), findsNothing);
     await leave(tester);
   });
 

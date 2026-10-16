@@ -71,7 +71,7 @@ void main() {
     final session = AuthSession(MemorySessionStore('t'), token: 't');
     final subscription = clearAccountDataOnSignOut(
       session,
-      ClearLibrary(repository),
+      [ClearLibrary(repository).call],
     );
     addTearDown(subscription.cancel);
 

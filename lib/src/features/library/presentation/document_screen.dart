@@ -34,6 +34,7 @@ class DocumentScreen extends ConsumerStatefulWidget {
     required this.onOpenText,
     required this.onConvert,
     required this.onOpenConversion,
+    required this.onListen,
     super.key,
   });
 
@@ -47,6 +48,9 @@ class DocumentScreen extends ConsumerStatefulWidget {
 
   /// Ouvre le suivi d'une conversion.
   final ValueChanged<String> onOpenConversion;
+
+  /// Ouvre le lecteur (ADR-0010).
+  final void Function(String conversionId, String title) onListen;
 
   @override
   ConsumerState<DocumentScreen> createState() => _DocumentScreenState();
@@ -214,6 +218,7 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
         item: item,
         onConvert: widget.onConvert,
         onOpenConversion: widget.onOpenConversion,
+        onListen: widget.onListen,
       ),
     );
   }
@@ -611,12 +616,14 @@ class _BottomAction extends StatelessWidget {
     required this.item,
     required this.onConvert,
     required this.onOpenConversion,
+    required this.onListen,
   });
 
   final DocumentSheet? sheet;
   final LibraryItem? item;
   final void Function(String title, int chars) onConvert;
   final ValueChanged<String> onOpenConversion;
+  final void Function(String conversionId, String title) onListen;
 
   static const _converting = {
     'queued',
@@ -651,11 +658,11 @@ class _BottomAction extends StatelessWidget {
         icon: Icons.timelapse,
         onPressed: () => onOpenConversion(conversion.id),
       );
-    } else if (listenable) {
-      action = const _Pending(
+    } else if (listenable && conversion != null) {
+      action = VoxPrimaryButton(
         label: 'Écouter',
         icon: Icons.headphones,
-        caption: 'Disponible avec le lecteur',
+        onPressed: () => onListen(conversion.id, sheet.title),
       );
     } else {
       action = VoxPrimaryButton(

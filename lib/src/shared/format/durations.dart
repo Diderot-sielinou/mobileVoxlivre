@@ -22,6 +22,17 @@ abstract final class VoxFormat {
     return '${value < 0 ? '-' : ''}${groups.join('\u202F')}';
   }
 
+  /// Horloge du lecteur : « 4:05 », « 1:02:09 ».
+  static String clock(int ms) {
+    final total = (ms < 0 ? 0 : ms) ~/ 1000;
+    final hours = total ~/ 3600;
+    final minutes = (total % 3600) ~/ 60;
+    final seconds = (total % 60).toString().padLeft(2, '0');
+    return hours > 0
+        ? '$hours:${minutes.toString().padLeft(2, '0')}:$seconds'
+        : '$minutes:$seconds';
+  }
+
   /// Nombre de pages : « 1 page », « 84 pages ».
   static String pages(int count) => count > 1 ? '$count pages' : '$count page';
 

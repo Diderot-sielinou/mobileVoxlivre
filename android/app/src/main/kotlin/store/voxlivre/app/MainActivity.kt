@@ -1,5 +1,6 @@
 package store.voxlivre.app
 
-import io.flutter.embedding.android.FlutterActivity
+import com.ryanheise.audioservice.AudioServiceActivity
 
-class MainActivity : FlutterActivity()
+// Lecteur en arrière-plan (just_audio_background, ADR-0010).
+class MainActivity : AudioServiceActivity()

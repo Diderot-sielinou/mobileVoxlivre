@@ -200,7 +200,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Livre audio prêt'), findsNWidgets(2));
     expect(find.text('4 parties'), findsOneWidget);
-    expect(find.text('Disponible avec le lecteur.'), findsOneWidget);
+    expect(find.text('Écouter'), findsOneWidget);
     expect(h.library.refreshes, before + 1);
 
     final fetches = gateway.fetches;
