@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug seulement : l'API locale (backend de développement, joint par
+     `adb reverse tcp:8080 tcp:8080`) est en HTTP. Partout ailleurs, et dans
+     toute version release, HTTPS obligatoire. -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>
