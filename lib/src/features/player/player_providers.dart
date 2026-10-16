@@ -8,6 +8,7 @@ import 'package:voxlivre/src/features/player/application/delete_bookmark.dart';
 import 'package:voxlivre/src/features/player/application/download_book.dart';
 import 'package:voxlivre/src/features/player/application/edit_bookmark.dart';
 import 'package:voxlivre/src/features/player/application/flush_positions.dart';
+import 'package:voxlivre/src/features/player/application/list_downloads.dart';
 import 'package:voxlivre/src/features/player/application/load_parts.dart';
 import 'package:voxlivre/src/features/player/application/open_book.dart';
 import 'package:voxlivre/src/features/player/application/remove_download.dart';
@@ -164,3 +165,14 @@ final bookmarksProvider = StreamProvider.autoDispose
     .family<List<Bookmark>, String>(
       (ref, documentId) => ref.watch(bookmarkStoreProvider).watch(documentId),
     );
+
+final listDownloadsProvider = Provider<ListDownloads>(
+  (ref) => ListDownloads(ref.watch(bookFilesProvider)),
+);
+
+/// Les livres complets sur le téléphone, avec leur place.
+// Type de fournisseur non exporté par flutter_riverpod 3 : il est inféré.
+// ignore: specify_nonobvious_property_types
+final downloadsProvider = StreamProvider.autoDispose<List<DownloadedBook>>(
+  (ref) => ref.watch(listDownloadsProvider)(),
+);

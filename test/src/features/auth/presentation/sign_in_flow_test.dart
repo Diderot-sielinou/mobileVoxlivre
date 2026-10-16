@@ -220,9 +220,14 @@ void main() {
       const CurrentUser(id: 'u1', email: 'lecteur@mail.com'),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Connecté : lecteur@mail.com'), findsOneWidget);
+    expect(find.text('Mon compte'), findsOneWidget);
+    expect(find.text('l••••@mail.com'), findsOneWidget, reason: 'masqué');
 
+    await tester.scrollUntilVisible(find.text('Se déconnecter'), 200);
     await tester.tap(find.text('Se déconnecter'));
+    await tester.pumpAndSettle();
+    expect(find.text('Se déconnecter ?'), findsOneWidget, reason: 'confirmé');
+    await tester.tap(find.widgetWithText(TextButton, 'Se déconnecter'));
     await tester.pumpAndSettle();
 
     expect(h.gateway.calls, ['sign-out']);
@@ -243,5 +248,20 @@ void main() {
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await expectLater(tester, meetsGuideline(textContrastGuideline));
     await leave(tester);
+  });
+
+  testWidgets('connexion : conditions et confidentialité s’ouvrent', (
+    tester,
+  ) async {
+    final h = await pumpVoxlivre(tester);
+    await tester.ensureVisible(find.text('Confidentialité'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Conditions d’utilisation'));
+    await tester.tap(find.text('Confidentialité'));
+    await tester.pumpAndSettle();
+    expect(h.links.opened.map((u) => u.path), [
+      '/conditions',
+      '/confidentialite',
+    ]);
   });
 }

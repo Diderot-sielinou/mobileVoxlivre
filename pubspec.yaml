@@ -7,6 +7,7 @@ environment:
   sdk: ^3.8.1
 
 dependencies:
+  connectivity_plus: ^7.3.2
   crypto: ^3.0.7
   dio: ^5.11.1
   drift: ^2.29.0
@@ -25,8 +26,10 @@ dependencies:
   just_audio_background: ^0.0.1-beta.17
   logging: ^1.3.0
   meta: ^1.16.0
+  package_info_plus: ^9.0.1
   path_provider: ^2.1.5
   shared_preferences: ^2.5.3
+  url_launcher: ^6.3.2
   uuid: ^4.6.0
 
 dev_dependencies:

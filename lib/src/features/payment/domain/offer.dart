@@ -31,6 +31,53 @@ final class Offer {
   final int? durationDays;
 }
 
+/// Nature d'une ligne du portefeuille.
+enum WalletEntryKind {
+  /// Achat d'une offre (+).
+  purchase,
+
+  /// Conversion (−).
+  consumption,
+
+  /// Remboursement d'une conversion échouée (+).
+  refund;
+
+  static WalletEntryKind fromWire(String value) => switch (value) {
+    'purchase' => WalletEntryKind.purchase,
+    'refund' => WalletEntryKind.refund,
+    _ => WalletEntryKind.consumption,
+  };
+}
+
+/// Une ligne de l'historique des unités (ADR-0019 du backend).
+final class WalletEntry {
+  const WalletEntry({
+    required this.id,
+    required this.kind,
+    required this.units,
+    required this.createdAt,
+    this.offerCode,
+    this.conversionId,
+  });
+
+  final String id;
+  final WalletEntryKind kind;
+
+  /// Signé : + achat ou remboursement, − consommation.
+  final int units;
+  final DateTime createdAt;
+  final String? offerCode;
+  final String? conversionId;
+}
+
+/// Une page de l'historique ; [nextCursor] `null` : fin.
+final class WalletPage {
+  const WalletPage({required this.entries, this.nextCursor});
+
+  final List<WalletEntry> entries;
+  final String? nextCursor;
+}
+
 /// Le solde du compte, par source.
 final class Balance {
   const Balance({

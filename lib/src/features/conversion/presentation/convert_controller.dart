@@ -5,6 +5,7 @@ import 'package:voxlivre/src/features/conversion/application/load_conversion_opt
 import 'package:voxlivre/src/features/conversion/conversion_providers.dart';
 import 'package:voxlivre/src/features/conversion/domain/conversion_options.dart';
 import 'package:voxlivre/src/features/conversion/domain/voice.dart';
+import 'package:voxlivre/src/shared/settings/device_settings.dart';
 
 /// Unités manquantes selon le backend (402 `QUOTA_EXCEEDED`).
 @immutable
@@ -83,7 +84,12 @@ final class ConvertController extends Notifier<ConvertViewState> {
       Ok(value: final options) => state.copyWith(
         loading: false,
         options: options,
-        voiceId: state.voiceId ?? suggestedVoice(options.voices)?.id,
+        voiceId:
+            state.voiceId ??
+            suggestedVoice(
+              options.voices,
+              preferred: ref.read(deviceSettingsProvider).defaultVoiceId,
+            )?.id,
       ),
       Err(:final error) => state.copyWith(
         loading: false,

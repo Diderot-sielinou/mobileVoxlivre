@@ -679,7 +679,14 @@ class _Line extends StatelessWidget {
                 ),
               ),
             ),
-            Text(value, style: text.titleSmall),
+            const SizedBox(width: VoxSpacing.sm),
+            Flexible(
+              child: Text(
+                value,
+                style: text.titleSmall,
+                textAlign: TextAlign.end,
+              ),
+            ),
           ],
         ),
       ),

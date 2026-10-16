@@ -85,7 +85,7 @@ void main() {
     expect(find.text(title), findsOneWidget);
     expect(find.text('DO'), findsOneWidget, reason: 'initiales');
     expect(find.text('120 pages'), findsOneWidget);
-    expect(find.text('214 300 caractères'), findsOneWidget);
+    expect(find.text('214 300 caractères'), findsOneWidget);
     expect(find.text('Texte'), findsOneWidget);
     expect(find.byType(OutlineRow), findsNWidgets(OutlineSection.preview));
     final semantics = tester.ensureSemantics();
@@ -378,8 +378,8 @@ void main() {
     test('nombres à la française', () {
       expect(VoxFormat.count(0), '0');
       expect(VoxFormat.count(999), '999');
-      expect(VoxFormat.count(214300), '214 300');
-      expect(VoxFormat.count(-1234567), '-1 234 567');
+      expect(VoxFormat.count(214300), '214 300');
+      expect(VoxFormat.count(-1234567), '-1 234 567');
     });
 
     testWidgets('petite couverture : initiales sur une ligne', (

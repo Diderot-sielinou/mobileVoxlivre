@@ -1,7 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:voxlivre/src/app/app_config.dart';
 import 'package:voxlivre/src/app/voxlivre_app.dart';
 import 'package:voxlivre/src/core/clock.dart';
+import 'package:voxlivre/src/core/result.dart';
+import 'package:voxlivre/src/features/account/account_providers.dart';
+import 'package:voxlivre/src/features/account/domain/app_info.dart';
 import 'package:voxlivre/src/features/auth/application/auth_session.dart';
 import 'package:voxlivre/src/features/auth/auth_providers.dart';
 import 'package:voxlivre/src/features/conversion/conversion_providers.dart';
@@ -10,6 +14,9 @@ import 'package:voxlivre/src/features/onboarding/domain/onboarding_store.dart';
 import 'package:voxlivre/src/features/onboarding/onboarding_providers.dart';
 import 'package:voxlivre/src/features/payment/payment_providers.dart';
 import 'package:voxlivre/src/features/player/player_providers.dart';
+import 'package:voxlivre/src/shared/links/link_opener.dart';
+import 'package:voxlivre/src/shared/network/network_kind.dart';
+import 'package:voxlivre/src/shared/settings/device_settings.dart';
 import 'package:voxlivre/src/shared/time/clock_providers.dart';
 
 import '../src/features/auth/fakes.dart';
@@ -27,6 +34,42 @@ final class MemoryOnboardingStore implements OnboardingStore {
 
   @override
   Future<void> complete() async => completed = true;
+}
+
+/// Configuration de test : API et site fictifs (ADR-0003, ADR-0014).
+final AppConfig testConfig = switch (AppConfig.parse(
+  env: 'dev',
+  apiBaseUrl: 'https://api.test',
+  siteUrl: 'https://site.test',
+  supportEmail: 'aide@site.test',
+)) {
+  Ok(:final value) => value,
+  Err(:final error) => throw StateError(error.message),
+};
+
+/// Réseau réglable à la main (Wi-Fi par défaut).
+final class FakeNetworkProbe implements NetworkProbe {
+  NetworkKind kind = NetworkKind.wifi;
+
+  @override
+  Future<NetworkKind> current() async => kind;
+}
+
+/// Liens « ouverts » (navigateur, messagerie), retenus pour les tests.
+final class FakeLinkOpener implements LinkOpener {
+  final opened = <Uri>[];
+  bool works = true;
+
+  @override
+  Future<bool> open(Uri uri) async {
+    opened.add(uri);
+    return works;
+  }
+}
+
+final class FakeAppInfo implements AppInfo {
+  @override
+  Future<String> version() async => '0.1.0 (1)';
 }
 
 /// Horloge réglable à la main.
@@ -62,6 +105,9 @@ typedef Harness = ({
   FakePaymentGateway payments,
   MemoryPaymentMemory paymentMemory,
   SequenceKeys keys,
+  FakeNetworkProbe network,
+  MemoryDeviceSettingsStore settings,
+  FakeLinkOpener links,
 });
 
 /// Lance l'app ; avec [token], la session est déjà ouverte ; [onboarded]
@@ -84,6 +130,7 @@ Future<Harness> pumpVoxlivre(
   MemoryBookmarkStore? bookmarks,
   FakePaymentGateway? payments,
   MemoryPaymentMemory? paymentMemory,
+  DeviceSettings deviceSettings = const DeviceSettings(),
   bool settle = true,
 }) async {
   final playerGateway = player ?? FakePlayerGateway();
@@ -93,6 +140,9 @@ Future<Harness> pumpVoxlivre(
   final paymentGateway = payments ?? FakePaymentGateway();
   final memory = paymentMemory ?? MemoryPaymentMemory();
   final keys = SequenceKeys();
+  final network = FakeNetworkProbe();
+  final settings = MemoryDeviceSettingsStore(deviceSettings);
+  final links = FakeLinkOpener();
   final audioEngine = audio ?? FakeAudioEngine();
   final conversionGateway = conversions ?? FakeConversionGateway();
   final textRepository = texts ?? FakeDocumentTextRepository();
@@ -114,6 +164,7 @@ Future<Harness> pumpVoxlivre(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        appConfigProvider.overrideWithValue(testConfig),
         authSessionProvider.overrideWithValue(session),
         authGatewayProvider.overrideWithValue(gateway),
         clockProvider.overrideWithValue(clock),
@@ -133,6 +184,10 @@ Future<Harness> pumpVoxlivre(
         paymentGatewayProvider.overrideWithValue(paymentGateway),
         paymentMemoryProvider.overrideWithValue(memory),
         keyGeneratorProvider.overrideWithValue(keys),
+        networkProbeProvider.overrideWithValue(network),
+        deviceSettingsStoreProvider.overrideWithValue(settings),
+        linkOpenerProvider.overrideWithValue(links),
+        appInfoProvider.overrideWithValue(FakeAppInfo()),
       ],
       child: const VoxlivreApp(),
     ),
@@ -163,5 +218,8 @@ Future<Harness> pumpVoxlivre(
     payments: paymentGateway,
     paymentMemory: memory,
     keys: keys,
+    network: network,
+    settings: settings,
+    links: links,
   );
 }

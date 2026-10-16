@@ -20,6 +20,7 @@ import 'package:voxlivre/src/features/player/player_providers.dart';
 import 'package:voxlivre/src/shared/http/api_client.dart';
 import 'package:voxlivre/src/shared/http/http_providers.dart';
 import 'package:voxlivre/src/shared/logging/app_logging.dart';
+import 'package:voxlivre/src/shared/settings/device_settings.dart';
 
 /// Démarrage : valide la configuration, lit le jeton de session et la
 /// mémoire du premier lancement (le splash natif reste affiché pendant ce
@@ -43,9 +44,10 @@ Future<void> bootstrap() async {
   };
 
   const store = SecureSessionStore();
-  final (token, onboarding) = await (
+  final (token, onboarding, settings) = await (
     store.read(),
     PrefsOnboardingStore.open(),
+    PrefsDeviceSettingsStore.open(),
   ).wait;
   final session = AuthSession(store, token: token);
   final container = ProviderContainer(
@@ -53,6 +55,7 @@ Future<void> bootstrap() async {
       appConfigProvider.overrideWithValue(config),
       authSessionProvider.overrideWithValue(session),
       onboardingStoreProvider.overrideWithValue(onboarding),
+      deviceSettingsStoreProvider.overrideWithValue(settings),
       apiClientProvider.overrideWithValue(
         ApiClient.create(
           baseUrl: config.apiBaseUrl,

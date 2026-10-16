@@ -58,7 +58,7 @@ void main() {
     await tester.tap(find.text('Pass 30 jours'));
     await tester.pumpAndSettle();
     if (phone != null) await tester.enterText(find.byType(TextField), phone);
-    await tester.tap(find.text('Payer 2 000 FCFA'));
+    await tester.tap(find.text('Payer 2 000 FCFA'));
     await tester.pumpAndSettle();
   }
 
@@ -73,17 +73,17 @@ void main() {
     );
     expect(find.byType(PaymentScreen), findsOneWidget);
     expect(find.text('Recharger des unités'), findsOneWidget, reason: 'titre');
-    expect(find.text('39 200 unités'), findsOneWidget, reason: 'solde');
+    expect(find.text('39 200 unités'), findsOneWidget, reason: 'solde');
     // Pass d'abord, prix du serveur.
     final pass = tester.getTopLeft(find.text('Pass 30 jours'));
-    final credits = tester.getTopLeft(find.text('Crédits 50 000 unités'));
+    final credits = tester.getTopLeft(find.text('Crédits 50 000 unités'));
     expect(pass.dy, lessThan(credits.dy));
-    expect(find.text('2 000 FCFA'), findsOneWidget);
+    expect(find.text('2 000 FCFA'), findsOneWidget);
 
     await tester.tap(find.text('Pass 30 jours'));
     await tester.pumpAndSettle();
     expect(find.text('694821033'), findsOneWidget, reason: 'pré-rempli');
-    await tester.tap(find.text('Payer 2 000 FCFA'));
+    await tester.tap(find.text('Payer 2 000 FCFA'));
     await tester.pumpAndSettle();
 
     expect(h.payments.starts.single.key, 'k-1');
@@ -93,7 +93,7 @@ void main() {
     );
     expect(
       find.text(
-        'Une demande de 2 000 FCFA arrive sur le +237 6•• •• •• 33.',
+        'Une demande de 2 000 FCFA arrive sur le +237 6•• •• •• 33.',
       ),
       findsOneWidget,
     );
@@ -109,7 +109,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Paiement réussi !'), findsOneWidget);
-    expect(find.text('+250 000 unités ajoutées'), findsOneWidget);
+    expect(find.text('+250 000 unités ajoutées'), findsOneWidget);
     expect(find.text('Valable jusqu’au 12 novembre.'), findsOneWidget);
     expect(find.text('+237 6•• •• •• 33'), findsOneWidget);
     expect(h.paymentMemory.pending, isNull);
@@ -153,12 +153,12 @@ void main() {
     expect(find.textContaining('Rien n’a été débité'), findsOneWidget);
 
     h.payments.startCode = 'NETWORK_UNAVAILABLE';
-    await tester.tap(find.text('Payer 2 000 FCFA'));
+    await tester.tap(find.text('Payer 2 000 FCFA'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Pas de connexion'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), '677000011');
-    await tester.tap(find.text('Payer 2 000 FCFA'));
+    await tester.tap(find.text('Payer 2 000 FCFA'));
     await tester.pumpAndSettle();
     expect([for (final s in h.payments.starts) s.key], ['k-1', 'k-1', 'k-2']);
     expect(
@@ -188,7 +188,7 @@ void main() {
     );
     await tester.tap(find.text('Réessayer le paiement'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Payer 2 000 FCFA'));
+    await tester.tap(find.text('Payer 2 000 FCFA'));
     await tester.pumpAndSettle();
     expect([for (final s in h.payments.starts) s.key], ['k-1', 'k-2']);
     await leave(tester);
@@ -249,7 +249,7 @@ void main() {
 
     memory.pending = onlyPayment(h);
     payments.startCode = 'PAYMENT_IN_PROGRESS_CONFLICT';
-    await tester.tap(find.text('Payer 2 000 FCFA'));
+    await tester.tap(find.text('Payer 2 000 FCFA'));
     await tester.pumpAndSettle();
     expect(
       find.text('Validez le paiement sur votre téléphone'),
@@ -277,7 +277,7 @@ void main() {
       paymentMemory: MemoryPaymentMemory(pending: id),
     );
     expect(find.text('Paiement réussi !'), findsOneWidget);
-    expect(find.text('+50 000 unités ajoutées'), findsOneWidget);
+    expect(find.text('+50 000 unités ajoutées'), findsOneWidget);
     expect(h.paymentMemory.pending, isNull);
     await tester.tap(find.text('Continuer'));
     await tester.pumpAndSettle();

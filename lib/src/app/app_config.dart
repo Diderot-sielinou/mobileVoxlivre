@@ -14,23 +14,44 @@ final class InvalidConfigFailure extends Failure {
 /// Configuration lue une fois au démarrage, depuis
 /// `--dart-define-from-file=config/<env>.json` (ADR-0003).
 final class AppConfig {
-  const AppConfig._({required this.env, required this.apiBaseUrl});
+  const AppConfig._({
+    required this.env,
+    required this.apiBaseUrl,
+    this.siteUrl,
+    this.supportEmail,
+  });
 
   final AppEnv env;
 
   /// Racine de l'API, sans `/` final.
   final Uri apiBaseUrl;
 
+  /// Site public (pages légales), facultatif (ADR-0014).
+  final Uri? siteUrl;
+
+  /// Adresse de l'aide, facultative.
+  final String? supportEmail;
+
+  /// Conditions d'utilisation, si le site est configuré.
+  Uri? get termsUrl => siteUrl?.resolve('conditions');
+
+  /// Politique de confidentialité, si le site est configuré.
+  Uri? get privacyUrl => siteUrl?.resolve('confidentialite');
+
   /// Valeurs compilées dans l'app par `--dart-define-from-file`.
   static Result<AppConfig, InvalidConfigFailure> fromEnvironment() => parse(
     env: const String.fromEnvironment('APP_ENV'),
     apiBaseUrl: const String.fromEnvironment('API_BASE_URL'),
+    siteUrl: const String.fromEnvironment('SITE_URL'),
+    supportEmail: const String.fromEnvironment('SUPPORT_EMAIL'),
   );
 
   /// Valide des valeurs brutes ; séparé de [fromEnvironment] pour les tests.
   static Result<AppConfig, InvalidConfigFailure> parse({
     required String env,
     required String apiBaseUrl,
+    String? siteUrl,
+    String? supportEmail,
   }) {
     final knownEnv = AppEnv.values.where((e) => e.name == env).firstOrNull;
     if (knownEnv == null) {
@@ -59,6 +80,29 @@ final class AppConfig {
         InvalidConfigFailure('API_BASE_URL doit être en https en production'),
       );
     }
+    // Site et contact : facultatifs, mais justes s'ils sont donnés.
+    Uri? site;
+    if (siteUrl != null && siteUrl.isNotEmpty) {
+      site = Uri.tryParse(siteUrl);
+      if (site == null || !site.isScheme('https') || !site.hasAuthority) {
+        return Result.err(
+          InvalidConfigFailure(
+            'SITE_URL doit être une URL https (reçu : "$siteUrl")',
+          ),
+        );
+      }
+      // `resolve('conditions')` doit garder le chemin : `/` final.
+      if (!site.path.endsWith('/')) site = site.replace(path: '${site.path}/');
+    }
+    final email = (supportEmail ?? '').trim();
+    if (email.isNotEmpty &&
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      return Result.err(
+        InvalidConfigFailure(
+          'SUPPORT_EMAIL doit être une adresse e-mail (reçu : "$supportEmail")',
+        ),
+      );
+    }
     final path = url.path.endsWith('/')
         ? url.path.substring(0, url.path.length - 1)
         : url.path;
@@ -66,6 +110,8 @@ final class AppConfig {
       AppConfig._(
         env: knownEnv,
         apiBaseUrl: url.replace(path: path),
+        siteUrl: site,
+        supportEmail: email.isEmpty ? null : email,
       ),
     );
   }

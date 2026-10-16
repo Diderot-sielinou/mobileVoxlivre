@@ -95,6 +95,26 @@ final class FakePaymentGateway implements PaymentGateway {
     return Result.ok(payment);
   }
 
+  /// Historique (le plus récent d'abord), servi par pages de [pageSize].
+  List<WalletEntry> wallet = [];
+  int pageSize = 30;
+  String? walletCode;
+  final walletCursors = <String?>[];
+
+  @override
+  Future<Result<WalletPage, Failure>> walletEntries({String? cursor}) async {
+    walletCursors.add(cursor);
+    if (walletCode case final code?) return Result.err(FakeFailure(code));
+    final from = cursor == null ? 0 : int.parse(cursor);
+    final to = (from + pageSize).clamp(0, wallet.length);
+    return Result.ok(
+      WalletPage(
+        entries: wallet.sublist(from, to),
+        nextCursor: to < wallet.length ? '$to' : null,
+      ),
+    );
+  }
+
   /// Conclut le paiement [id] (`succeeded` accorde l'offre au solde).
   void settle(String id, PaymentStatus status, {String? failureCode}) {
     final old = byId[id]!;

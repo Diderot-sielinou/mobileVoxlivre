@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxlivre/src/features/conversion/application/fetch_conversion.dart';
 import 'package:voxlivre/src/features/conversion/application/load_conversion_options.dart';
+import 'package:voxlivre/src/features/conversion/application/load_voices.dart';
 import 'package:voxlivre/src/features/conversion/application/start_conversion.dart';
 import 'package:voxlivre/src/features/conversion/domain/conversion_gateway.dart';
 import 'package:voxlivre/src/features/conversion/infrastructure/api_conversion_gateway.dart';
@@ -22,4 +23,8 @@ final startConversionProvider = Provider<StartConversion>(
 
 final fetchConversionProvider = Provider<FetchConversion>(
   (ref) => FetchConversion(ref.watch(conversionGatewayProvider)),
+);
+
+final loadVoicesProvider = Provider<LoadVoices>(
+  (ref) => LoadVoices(ref.watch(conversionGatewayProvider)),
 );

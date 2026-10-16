@@ -9,10 +9,15 @@ import 'package:voxlivre/src/shared/design/vox_colors.dart';
 import 'package:voxlivre/src/shared/design/vox_tokens.dart';
 import 'package:voxlivre/src/shared/design/widgets/vox_banner.dart';
 import 'package:voxlivre/src/shared/design/widgets/vox_primary_button.dart';
+import 'package:voxlivre/src/shared/links/legal_links.dart';
 
 /// Connexion, étape 1 : numéro mobile ou adresse e-mail.
 class SignInScreen extends ConsumerStatefulWidget {
-  const SignInScreen({super.key});
+  const SignInScreen({this.termsUrl, this.privacyUrl, super.key});
+
+  /// Pages légales, fournies par la configuration (ADR-0014).
+  final Uri? termsUrl;
+  final Uri? privacyUrl;
 
   @override
   ConsumerState<SignInScreen> createState() => _SignInScreenState();
@@ -142,6 +147,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 'et la politique de confidentialité de Voxlivre.',
                 textAlign: TextAlign.center,
                 style: text.bodySmall,
+              ),
+              LegalLinks(
+                termsUrl: widget.termsUrl,
+                privacyUrl: widget.privacyUrl,
               ),
             ],
           ),

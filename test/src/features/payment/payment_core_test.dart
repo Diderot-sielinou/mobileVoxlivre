@@ -292,7 +292,7 @@ void main() {
 
   test('textes', () {
     expect(offerTitle(passOffer), 'Pass 30 jours');
-    expect(offerTitle(creditsS), 'Crédits 50 000 unités');
+    expect(offerTitle(creditsS), 'Crédits 50 000 unités');
     expect(maskedPhone('47'), '+237 6•• •• •• 47');
     for (final code in [
       'INVALID_PAYMENT_PHONE',

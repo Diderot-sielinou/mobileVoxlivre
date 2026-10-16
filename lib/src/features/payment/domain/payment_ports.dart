@@ -20,6 +20,9 @@ abstract interface class PaymentGateway {
 
   /// Relit un paiement (lecture en base côté serveur).
   Future<Result<Payment, Failure>> payment(String id);
+
+  /// Une page de l'historique des unités, du plus récent au plus ancien.
+  Future<Result<WalletPage, Failure>> walletEntries({String? cursor});
 }
 
 /// Ce que le paiement garde sur l'appareil (stockage sécurisé).

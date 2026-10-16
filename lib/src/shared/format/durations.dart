@@ -12,14 +12,15 @@ abstract final class VoxFormat {
         : '$hours h ${rest.toString().padLeft(2, '0')}';
   }
 
-  /// Nombre à la française : « 214 300 » (espace fine insécable).
+  /// Nombre à la française : « 214 300 » (espace insécable U+00A0 : les
+  /// polices embarquées n'ont pas l'espace fine U+202F, rendue vide).
   static String count(int value) {
     final digits = value.abs().toString();
     final groups = <String>[];
     for (var end = digits.length; end > 0; end -= 3) {
       groups.insert(0, digits.substring(end < 3 ? 0 : end - 3, end));
     }
-    return '${value < 0 ? '-' : ''}${groups.join('\u202F')}';
+    return '${value < 0 ? '-' : ''}${groups.join('\u00A0')}';
   }
 
   /// Horloge du lecteur : « 4:05 », « 1:02:09 ».
@@ -85,6 +86,12 @@ abstract final class VoxFormat {
     final hh = local.hour.toString().padLeft(2, '0');
     final mm = local.minute.toString().padLeft(2, '0');
     return '${day(local)} ${local.year} à $hh:$mm';
+  }
+
+  /// Mois : « octobre 2026 ».
+  static String month(DateTime at) {
+    final local = at.toLocal();
+    return '${_months[local.month - 1]} ${local.year}';
   }
 
   /// Montant : « 2 000 FCFA ».

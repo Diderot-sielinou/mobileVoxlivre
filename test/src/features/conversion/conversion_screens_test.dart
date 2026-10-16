@@ -6,6 +6,7 @@ import 'package:voxlivre/src/features/conversion/presentation/convert_screen.dar
 import 'package:voxlivre/src/features/library/domain/library_item.dart';
 import 'package:voxlivre/src/features/library/presentation/document_screen.dart';
 
+import 'package:voxlivre/src/shared/settings/device_settings.dart';
 import '../../../helpers/app_harness.dart';
 import '../library/fakes.dart';
 import '../library/presentation/library_screen_test.dart' show tallScreen;
@@ -60,16 +61,16 @@ void main() {
     );
 
     expect(find.byType(ConvertScreen), findsOneWidget);
-    expect(find.text('214 300 caractères'), findsOneWidget);
+    expect(find.text('214 300 caractères'), findsOneWidget);
     expect(
-      find.text('Utilisable pour cette voix : 300 000 unités'),
+      find.text('Utilisable pour cette voix : 300 000 unités'),
       findsOneWidget,
     );
-    expect(find.text('Standard ×1 · 214 300 unités'), findsNWidgets(2));
-    expect(find.text('Naturelle ×4 · 857 200 unités'), findsOneWidget);
+    expect(find.text('Standard ×1 · 214 300 unités'), findsNWidgets(2));
+    expect(find.text('Naturelle ×4 · 857 200 unités'), findsOneWidget);
     expect(find.text('Unités insuffisantes'), findsOneWidget, reason: 'Léa');
     expect(
-      find.text('Amina · 214 300 unités seront décomptées.'),
+      find.text('Amina · 214 300 unités seront décomptées.'),
       findsOneWidget,
     );
 
@@ -96,7 +97,7 @@ void main() {
     await tester.tap(find.text('Léa'));
     await tester.pumpAndSettle();
     expect(
-      find.text('Il vous manque 857 200 unités pour la voix Léa.'),
+      find.text('Il vous manque 857 200 unités pour la voix Léa.'),
       findsOneWidget,
     );
     expect(find.textContaining('(voix standard seulement)'), findsOneWidget);
@@ -120,7 +121,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Il vous manque 200 000 unités pour la voix Amina.'),
+      find.text('Il vous manque 200 000 unités pour la voix Amina.'),
       findsOneWidget,
     );
     expect(find.byType(ConvertScreen), findsOneWidget);
@@ -279,5 +280,27 @@ void main() {
         reason: reason,
       );
     }
+  });
+
+  testWidgets('voix par défaut du Profil préchoisie', (tester) async {
+    tallScreen(tester);
+    await pumpVoxlivre(
+      tester,
+      token: 'jeton',
+      library: FakeLibraryRepository(
+        remote: [book('a', title: title, status: LibraryStatus.notConverted)],
+      ),
+      documents: FakeDocumentRepository(
+        remote: {'a': sheet('a', title: title)},
+      ),
+      conversions: FakeConversionGateway(account: unitsAccount(free: 300000)),
+      deviceSettings: const DeviceSettings(defaultVoiceId: 'fr-m2'),
+    );
+    await tester.tap(find.text(title));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choisir la voix et convertir'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Marc · '), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
   });
 }

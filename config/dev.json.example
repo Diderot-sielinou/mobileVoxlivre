@@ -1,4 +1,6 @@
 {
   "APP_ENV": "dev",
-  "API_BASE_URL": "https://api.voxlivre.store"
+  "API_BASE_URL": "https://api.voxlivre.store",
+  "SITE_URL": "https://voxlivre.store",
+  "SUPPORT_EMAIL": "contact@voxlivre.store"
 }

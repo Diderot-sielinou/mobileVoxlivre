@@ -9,6 +9,7 @@ import 'package:voxlivre/src/features/player/domain/manifest.dart';
 import 'package:voxlivre/src/features/player/domain/offline_book.dart';
 import 'package:voxlivre/src/features/player/domain/player_ports.dart';
 import 'package:voxlivre/src/features/player/player_providers.dart';
+import 'package:voxlivre/src/shared/settings/device_settings.dart';
 import 'package:voxlivre/src/shared/time/clock_providers.dart';
 
 /// Vitesses proposées (maquette « Vitesse de lecture »).
@@ -171,8 +172,13 @@ final class PlayerController extends Notifier<PlayerViewState> {
         final startMs = session.resumeAt?.audioMs ?? 0;
         await _engine.load(session.parts, startMs: startMs, title: title);
         if (!ref.mounted) return;
+        // Vitesse gardée sur l'appareil (ADR-0014).
+        final speed = ref.read(deviceSettingsProvider).speed;
+        if (speed != 1) await _engine.setSpeed(speed);
+        if (!ref.mounted) return;
         state = PlayerViewState(
           loading: false,
+          speed: speed,
           text: session.text,
           wordPosition: session.text.positionAt(startMs),
           positionMs: startMs,
@@ -288,6 +294,12 @@ final class PlayerController extends Notifier<PlayerViewState> {
 
   Future<void> setSpeed(double speed) async {
     state = state.copyWith(speed: speed);
+    final settings = ref.read(deviceSettingsProvider);
+    unawaited(
+      ref
+          .read(deviceSettingsProvider.notifier)
+          .update(settings.copyWith(speed: speed)),
+    );
     await _engine.setSpeed(speed);
   }
 

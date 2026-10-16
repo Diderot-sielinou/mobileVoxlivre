@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxlivre/src/features/payment/application/check_payment.dart';
 import 'package:voxlivre/src/features/payment/application/clear_payment_memory.dart';
 import 'package:voxlivre/src/features/payment/application/load_offers.dart';
+import 'package:voxlivre/src/features/payment/application/load_wallet_page.dart';
 import 'package:voxlivre/src/features/payment/application/pending_payment.dart';
 import 'package:voxlivre/src/features/payment/application/start_payment.dart';
 import 'package:voxlivre/src/features/payment/domain/payment_ports.dart';
@@ -46,4 +47,8 @@ final pendingPaymentProvider = Provider<PendingPayment>(
 
 final clearPaymentMemoryProvider = Provider<ClearPaymentMemory>(
   (ref) => ClearPaymentMemory(ref.watch(paymentMemoryProvider)),
+);
+
+final loadWalletPageProvider = Provider<LoadWalletPage>(
+  (ref) => LoadWalletPage(ref.watch(paymentGatewayProvider)),
 );

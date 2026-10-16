@@ -20,15 +20,21 @@ final class LoadConversionOptions {
       case (Err(:final error), _) || (_, Err(:final error)):
         return Result.err(error);
       case (Ok(value: final list), Ok(value: final units)):
-        final sorted = [...list]
-          ..sort((a, b) {
-            if (a.isDefault != b.isDefault) return a.isDefault ? -1 : 1;
-            return a.tier.index.compareTo(b.tier.index);
-          });
-        return Result.ok(ConversionOptions(voices: sorted, account: units));
+        return Result.ok(
+          ConversionOptions(voices: sortVoices(list), account: units),
+        );
     }
   }
 }
 
-/// La voix proposée d'abord.
-Voice? suggestedVoice(List<Voice> voices) => voices.firstOrNull;
+/// Voix par défaut d'abord, puis les standard, puis les naturelles.
+List<Voice> sortVoices(List<Voice> voices) => [...voices]
+  ..sort((a, b) {
+    if (a.isDefault != b.isDefault) return a.isDefault ? -1 : 1;
+    return a.tier.index.compareTo(b.tier.index);
+  });
+
+/// La voix proposée d'abord : celle choisie dans le Profil si elle existe
+/// encore (ADR-0014), sinon la première (défaut du serveur).
+Voice? suggestedVoice(List<Voice> voices, {String? preferred}) =>
+    voices.where((v) => v.id == preferred).firstOrNull ?? voices.firstOrNull;

@@ -5,6 +5,7 @@ import 'package:voxlivre/src/features/player/domain/reading_position.dart';
 import 'package:voxlivre/src/features/player/presentation/player_controller.dart';
 import 'package:voxlivre/src/features/player/presentation/player_screen.dart';
 
+import 'package:voxlivre/src/shared/settings/device_settings.dart';
 import '../../../helpers/app_harness.dart';
 import '../library/fakes.dart';
 import '../library/presentation/library_screen_test.dart' show tallScreen;
@@ -310,5 +311,33 @@ void main() {
     }
     expect(speedLabel(1), '1×');
     expect(speedLabel(0.75), '0,75×');
+  });
+
+  testWidgets('vitesse gardée : appliquée à l’ouverture, retenue au choix', (
+    tester,
+  ) async {
+    tallScreen(tester);
+    final h = await pumpVoxlivre(
+      tester,
+      token: 'jeton',
+      library: FakeLibraryRepository(remote: [book('a', title: title)]),
+      documents: FakeDocumentRepository(
+        remote: {'a': sheet('a', title: title)},
+      ),
+      deviceSettings: const DeviceSettings(speed: 1.25),
+    );
+    await tester.tap(find.text(title));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Écouter'));
+    await tester.pumpAndSettle();
+    expect(h.audio.speed, 1.25);
+    expect(find.text('1,25×'), findsOneWidget);
+
+    await tester.tap(find.text('1,25×'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('2×'));
+    await tester.pumpAndSettle();
+    expect(h.settings.read().speed, 2);
+    await leave(tester);
   });
 }

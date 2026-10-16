@@ -65,6 +65,30 @@ final class ApiPaymentGateway implements PaymentGateway {
     decode: (r) => _payment(r.json! as _Json),
   );
 
+  @override
+  Future<Result<WalletPage, Failure>> walletEntries({String? cursor}) =>
+      _api.get(
+        '/v1/billing/wallet/entries',
+        query: {'limit': 30, 'cursor': ?cursor},
+        decode: (r) {
+          final json = r.json! as _Json;
+          return WalletPage(
+            entries: [
+              for (final e in (json['items']! as List<Object?>).cast<_Json>())
+                WalletEntry(
+                  id: e['id']! as String,
+                  kind: WalletEntryKind.fromWire(e['kind']! as String),
+                  units: e['units']! as int,
+                  createdAt: _date(e['createdAt'])!,
+                  offerCode: e['offerCode'] as String?,
+                  conversionId: e['conversionId'] as String?,
+                ),
+            ],
+            nextCursor: json['nextCursor'] as String?,
+          );
+        },
+      );
+
   static Payment _payment(_Json json) => Payment(
     id: json['id']! as String,
     status: PaymentStatus.fromWire(json['status']! as String),

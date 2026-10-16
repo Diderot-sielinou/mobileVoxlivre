@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:voxlivre/src/app/app_config.dart';
 import 'package:voxlivre/src/app/home_shell.dart';
 import 'package:voxlivre/src/app/resume_payment.dart';
+import 'package:voxlivre/src/features/account/presentation/profile_screen.dart';
 import 'package:voxlivre/src/features/auth/application/auth_session.dart';
 import 'package:voxlivre/src/features/auth/auth_providers.dart';
 import 'package:voxlivre/src/features/auth/presentation/auth_routes.dart';
@@ -13,6 +15,7 @@ import 'package:voxlivre/src/features/auth/presentation/sign_in_screen.dart';
 import 'package:voxlivre/src/features/auth/presentation/widgets/account_summary.dart';
 import 'package:voxlivre/src/features/conversion/presentation/conversion_screen.dart';
 import 'package:voxlivre/src/features/conversion/presentation/convert_screen.dart';
+import 'package:voxlivre/src/features/conversion/presentation/widgets/default_voice_tile.dart';
 import 'package:voxlivre/src/features/library/library_providers.dart';
 import 'package:voxlivre/src/features/library/presentation/document_screen.dart';
 import 'package:voxlivre/src/features/library/presentation/import_screen.dart';
@@ -22,9 +25,11 @@ import 'package:voxlivre/src/features/onboarding/onboarding_providers.dart';
 import 'package:voxlivre/src/features/onboarding/presentation/onboarding_routes.dart';
 import 'package:voxlivre/src/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:voxlivre/src/features/payment/presentation/payment_screen.dart';
+import 'package:voxlivre/src/features/payment/presentation/units_history.dart';
 import 'package:voxlivre/src/features/player/player_providers.dart';
 import 'package:voxlivre/src/features/player/presentation/offline_card.dart';
 import 'package:voxlivre/src/features/player/presentation/player_screen.dart';
+import 'package:voxlivre/src/features/player/presentation/storage.dart';
 
 /// Chemins des onglets : une constante par route, jamais de chaîne répétée.
 abstract final class AppRoutes {
@@ -57,6 +62,15 @@ GoRoute _tab(String path, String title, [Widget? child]) => GoRoute(
   path: path,
   builder: (context, state) => PlaceholderPage(title: title, child: child),
 );
+
+/// Titre du livre d'une conversion, lu dans la bibliothèque (ADR-0014).
+String? _titleOf(Ref ref, String conversionId) => ref
+    .read(librarySnapshotProvider)
+    .value
+    ?.items
+    .where((item) => item.conversion?.id == conversionId)
+    .firstOrNull
+    ?.title;
 
 /// Ouvre le lecteur d'une conversion (ADR-0010).
 void _listen(BuildContext context, String conversionId, String title) =>
@@ -97,7 +111,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AuthRoutes.signIn,
-        builder: (context, state) => const SignInScreen(),
+        builder: (context, state) => SignInScreen(
+          termsUrl: ref.read(appConfigProvider).termsUrl,
+          privacyUrl: ref.read(appConfigProvider).privacyUrl,
+        ),
         routes: [
           GoRoute(
             path: 'code',
@@ -272,7 +289,40 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(routes: [_tab(AppRoutes.stats, 'Statistiques')]),
           StatefulShellBranch(
             routes: [
-              _tab(AppRoutes.profile, 'Profil', const AccountSummary()),
+              // Profil composé de morceaux des fonctionnalités (ADR-0014).
+              GoRoute(
+                path: AppRoutes.profile,
+                builder: (context, state) => ProfileScreen(
+                  header: const ProfileHeader(),
+                  units: UnitsCard(
+                    onOpenHistory: () =>
+                        context.push('${AppRoutes.profile}/units'),
+                    onRecharge: () => context.push<bool>(AppRoutes.payment),
+                  ),
+                  reading: const [DefaultVoiceTile(), SpeedTile()],
+                  storage: StorageTile(
+                    onOpen: () => context.push('${AppRoutes.profile}/storage'),
+                  ),
+                  signOut: const SignOutButton(),
+                  termsUrl: ref.read(appConfigProvider).termsUrl,
+                  privacyUrl: ref.read(appConfigProvider).privacyUrl,
+                  supportEmail: ref.read(appConfigProvider).supportEmail,
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'units',
+                    builder: (context, state) => UnitsHistoryScreen(
+                      onRecharge: () => context.push<bool>(AppRoutes.payment),
+                      titleOf: (id) => _titleOf(ref, id),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'storage',
+                    builder: (context, state) =>
+                        StorageScreen(titleOf: (id) => _titleOf(ref, id)),
+                  ),
+                ],
+              ),
             ],
           ),
         ],

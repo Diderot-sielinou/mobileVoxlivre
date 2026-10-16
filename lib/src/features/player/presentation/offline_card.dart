@@ -4,6 +4,8 @@ import 'package:voxlivre/src/features/player/presentation/offline_controller.dar
 import 'package:voxlivre/src/shared/design/vox_colors.dart';
 import 'package:voxlivre/src/shared/design/vox_tokens.dart';
 import 'package:voxlivre/src/shared/format/durations.dart';
+import 'package:voxlivre/src/shared/network/network_kind.dart';
+import 'package:voxlivre/src/shared/settings/device_settings.dart';
 
 /// Carte « Écouter sans connexion » de la fiche (ADR-0011) : télécharger,
 /// suivre, reprendre ; même taille dans tous ses états. « Écouter » reste
@@ -75,7 +77,7 @@ class OfflineCard extends ConsumerWidget {
         child: Text('Télécharger'),
       ),
       OfflineStage.available => OutlinedButton(
-        onPressed: controller.download,
+        onPressed: () => downloadIfAllowed(context, ref, controller, view),
         child: const Text('Télécharger'),
       ),
       OfflineStage.downloading => TextButton(
@@ -83,7 +85,7 @@ class OfflineCard extends ConsumerWidget {
         child: const Text('Annuler'),
       ),
       OfflineStage.interrupted => OutlinedButton(
-        onPressed: controller.download,
+        onPressed: () => downloadIfAllowed(context, ref, controller, view),
         child: const Text('Reprendre'),
       ),
       OfflineStage.downloaded => null,
@@ -157,6 +159,51 @@ class OfflineCard extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// « Seulement en Wi-Fi » (ADR-0014) : en données mobiles, on demande
+/// avant de télécharger, avec la taille.
+Future<void> downloadIfAllowed(
+  BuildContext context,
+  WidgetRef ref,
+  OfflineController controller,
+  OfflineViewState view,
+) async {
+  final wifiOnly = ref.read(deviceSettingsProvider).wifiOnly;
+  if (wifiOnly &&
+      await ref.read(networkProbeProvider).current() == NetworkKind.mobile) {
+    if (!context.mounted) return;
+    final left = switch ((view.totalBytes, view.progress)) {
+      (final total?, final progress?) => total - progress.bytesDone,
+      (final total?, null) => total,
+      _ => null,
+    };
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Télécharger en données mobiles ?'),
+        content: Text(
+          left == null
+              ? 'Vous n’êtes pas en Wi-Fi : le téléchargement utilisera '
+                    'votre forfait.'
+              : 'Vous n’êtes pas en Wi-Fi : ${VoxFormat.bytes(left)} '
+                    'seront pris sur votre forfait.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Attendre le Wi-Fi'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Télécharger'),
+          ),
+        ],
+      ),
+    );
+    if (!(confirmed ?? false)) return;
+  }
+  await controller.download();
 }
 
 /// Titre d'un téléchargement arrêté, selon sa raison.
