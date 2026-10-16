@@ -1,19 +1,27 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:voxlivre/src/features/player/application/add_bookmark.dart';
+import 'package:voxlivre/src/features/player/application/clear_bookmarks.dart';
 import 'package:voxlivre/src/features/player/application/clear_downloads.dart';
 import 'package:voxlivre/src/features/player/application/clear_positions.dart';
+import 'package:voxlivre/src/features/player/application/delete_bookmark.dart';
 import 'package:voxlivre/src/features/player/application/download_book.dart';
+import 'package:voxlivre/src/features/player/application/edit_bookmark.dart';
 import 'package:voxlivre/src/features/player/application/flush_positions.dart';
 import 'package:voxlivre/src/features/player/application/load_parts.dart';
 import 'package:voxlivre/src/features/player/application/open_book.dart';
 import 'package:voxlivre/src/features/player/application/remove_download.dart';
 import 'package:voxlivre/src/features/player/application/save_position.dart';
+import 'package:voxlivre/src/features/player/application/sync_bookmarks.dart';
+import 'package:voxlivre/src/features/player/domain/bookmark.dart';
 import 'package:voxlivre/src/features/player/domain/player_ports.dart';
 import 'package:voxlivre/src/features/player/infrastructure/api_player_gateway.dart';
 import 'package:voxlivre/src/features/player/infrastructure/device_book_files.dart';
+import 'package:voxlivre/src/features/player/infrastructure/drift_bookmark_store.dart';
 import 'package:voxlivre/src/features/player/infrastructure/drift_position_store.dart';
 import 'package:voxlivre/src/features/player/infrastructure/just_audio_engine.dart';
 import 'package:voxlivre/src/features/player/infrastructure/player_database.dart';
+import 'package:voxlivre/src/features/player/infrastructure/uuid_ids.dart';
 import 'package:voxlivre/src/shared/http/http_providers.dart';
 import 'package:voxlivre/src/shared/time/clock_providers.dart';
 
@@ -108,3 +116,51 @@ final clearDownloadsProvider = Provider<ClearDownloads>(
 final downloadedBooksProvider = StreamProvider<Set<String>>(
   (ref) => ref.watch(bookFilesProvider).watchComplete(),
 );
+
+/// Marque-pages (ADR-0012).
+final bookmarkStoreProvider = Provider<BookmarkStore>(
+  (ref) => DriftBookmarkStore(ref.watch(playerDatabaseProvider)),
+);
+
+final idGeneratorProvider = Provider<IdGenerator>((ref) => const UuidIds());
+
+final addBookmarkProvider = Provider<AddBookmark>(
+  (ref) => AddBookmark(
+    ref.watch(bookmarkStoreProvider),
+    ref.watch(clockProvider),
+    ref.watch(idGeneratorProvider),
+  ),
+);
+
+final editBookmarkProvider = Provider<EditBookmark>(
+  (ref) => EditBookmark(
+    ref.watch(bookmarkStoreProvider),
+    ref.watch(clockProvider),
+  ),
+);
+
+final deleteBookmarkProvider = Provider<DeleteBookmark>(
+  (ref) => DeleteBookmark(
+    ref.watch(bookmarkStoreProvider),
+    ref.watch(clockProvider),
+  ),
+);
+
+final syncBookmarksProvider = Provider<SyncBookmarks>(
+  (ref) => SyncBookmarks(
+    ref.watch(bookmarkStoreProvider),
+    ref.watch(playerGatewayProvider),
+  ),
+);
+
+final clearBookmarksProvider = Provider<ClearBookmarks>(
+  (ref) => ClearBookmarks(ref.watch(bookmarkStoreProvider)),
+);
+
+/// Les marque-pages actifs d'un document.
+// Type de famille non exporté par flutter_riverpod 3 : il est inféré.
+// ignore: specify_nonobvious_property_types
+final bookmarksProvider = StreamProvider.autoDispose
+    .family<List<Bookmark>, String>(
+      (ref, documentId) => ref.watch(bookmarkStoreProvider).watch(documentId),
+    );

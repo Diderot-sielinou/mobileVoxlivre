@@ -884,6 +884,672 @@ class VerifiedPartsCompanion extends UpdateCompanion<VerifiedPartRow> {
   }
 }
 
+class $BookmarksTable extends Bookmarks
+    with TableInfo<$BookmarksTable, StoredBookmark> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BookmarksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _documentIdMeta = const VerificationMeta(
+    'documentId',
+  );
+  @override
+  late final GeneratedColumn<String> documentId = GeneratedColumn<String>(
+    'document_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pageNumberMeta = const VerificationMeta(
+    'pageNumber',
+  );
+  @override
+  late final GeneratedColumn<int> pageNumber = GeneratedColumn<int>(
+    'page_number',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _wordIndexMeta = const VerificationMeta(
+    'wordIndex',
+  );
+  @override
+  late final GeneratedColumn<int> wordIndex = GeneratedColumn<int>(
+    'word_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _excerptMeta = const VerificationMeta(
+    'excerpt',
+  );
+  @override
+  late final GeneratedColumn<String> excerpt = GeneratedColumn<String>(
+    'excerpt',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _needsReviewMeta = const VerificationMeta(
+    'needsReview',
+  );
+  @override
+  late final GeneratedColumn<bool> needsReview = GeneratedColumn<bool>(
+    'needs_review',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("needs_review" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pendingMeta = const VerificationMeta(
+    'pending',
+  );
+  @override
+  late final GeneratedColumn<bool> pending = GeneratedColumn<bool>(
+    'pending',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pending" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    documentId,
+    pageNumber,
+    wordIndex,
+    excerpt,
+    note,
+    needsReview,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pending,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'bookmarks';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StoredBookmark> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('document_id')) {
+      context.handle(
+        _documentIdMeta,
+        documentId.isAcceptableOrUnknown(data['document_id']!, _documentIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_documentIdMeta);
+    }
+    if (data.containsKey('page_number')) {
+      context.handle(
+        _pageNumberMeta,
+        pageNumber.isAcceptableOrUnknown(data['page_number']!, _pageNumberMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pageNumberMeta);
+    }
+    if (data.containsKey('word_index')) {
+      context.handle(
+        _wordIndexMeta,
+        wordIndex.isAcceptableOrUnknown(data['word_index']!, _wordIndexMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_wordIndexMeta);
+    }
+    if (data.containsKey('excerpt')) {
+      context.handle(
+        _excerptMeta,
+        excerpt.isAcceptableOrUnknown(data['excerpt']!, _excerptMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_excerptMeta);
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_noteMeta);
+    }
+    if (data.containsKey('needs_review')) {
+      context.handle(
+        _needsReviewMeta,
+        needsReview.isAcceptableOrUnknown(
+          data['needs_review']!,
+          _needsReviewMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('pending')) {
+      context.handle(
+        _pendingMeta,
+        pending.isAcceptableOrUnknown(data['pending']!, _pendingMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StoredBookmark map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StoredBookmark(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      documentId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}document_id'],
+      )!,
+      pageNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}page_number'],
+      )!,
+      wordIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}word_index'],
+      )!,
+      excerpt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}excerpt'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      )!,
+      needsReview: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}needs_review'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      pending: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pending'],
+      )!,
+    );
+  }
+
+  @override
+  $BookmarksTable createAlias(String alias) {
+    return $BookmarksTable(attachedDatabase, alias);
+  }
+}
+
+class StoredBookmark extends DataClass implements Insertable<StoredBookmark> {
+  final String id;
+  final String documentId;
+  final int pageNumber;
+  final int wordIndex;
+  final String excerpt;
+  final String note;
+  final bool needsReview;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool pending;
+  const StoredBookmark({
+    required this.id,
+    required this.documentId,
+    required this.pageNumber,
+    required this.wordIndex,
+    required this.excerpt,
+    required this.note,
+    required this.needsReview,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.pending,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['document_id'] = Variable<String>(documentId);
+    map['page_number'] = Variable<int>(pageNumber);
+    map['word_index'] = Variable<int>(wordIndex);
+    map['excerpt'] = Variable<String>(excerpt);
+    map['note'] = Variable<String>(note);
+    map['needs_review'] = Variable<bool>(needsReview);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['pending'] = Variable<bool>(pending);
+    return map;
+  }
+
+  BookmarksCompanion toCompanion(bool nullToAbsent) {
+    return BookmarksCompanion(
+      id: Value(id),
+      documentId: Value(documentId),
+      pageNumber: Value(pageNumber),
+      wordIndex: Value(wordIndex),
+      excerpt: Value(excerpt),
+      note: Value(note),
+      needsReview: Value(needsReview),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      pending: Value(pending),
+    );
+  }
+
+  factory StoredBookmark.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StoredBookmark(
+      id: serializer.fromJson<String>(json['id']),
+      documentId: serializer.fromJson<String>(json['documentId']),
+      pageNumber: serializer.fromJson<int>(json['pageNumber']),
+      wordIndex: serializer.fromJson<int>(json['wordIndex']),
+      excerpt: serializer.fromJson<String>(json['excerpt']),
+      note: serializer.fromJson<String>(json['note']),
+      needsReview: serializer.fromJson<bool>(json['needsReview']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      pending: serializer.fromJson<bool>(json['pending']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'documentId': serializer.toJson<String>(documentId),
+      'pageNumber': serializer.toJson<int>(pageNumber),
+      'wordIndex': serializer.toJson<int>(wordIndex),
+      'excerpt': serializer.toJson<String>(excerpt),
+      'note': serializer.toJson<String>(note),
+      'needsReview': serializer.toJson<bool>(needsReview),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'pending': serializer.toJson<bool>(pending),
+    };
+  }
+
+  StoredBookmark copyWith({
+    String? id,
+    String? documentId,
+    int? pageNumber,
+    int? wordIndex,
+    String? excerpt,
+    String? note,
+    bool? needsReview,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? pending,
+  }) => StoredBookmark(
+    id: id ?? this.id,
+    documentId: documentId ?? this.documentId,
+    pageNumber: pageNumber ?? this.pageNumber,
+    wordIndex: wordIndex ?? this.wordIndex,
+    excerpt: excerpt ?? this.excerpt,
+    note: note ?? this.note,
+    needsReview: needsReview ?? this.needsReview,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    pending: pending ?? this.pending,
+  );
+  StoredBookmark copyWithCompanion(BookmarksCompanion data) {
+    return StoredBookmark(
+      id: data.id.present ? data.id.value : this.id,
+      documentId: data.documentId.present
+          ? data.documentId.value
+          : this.documentId,
+      pageNumber: data.pageNumber.present
+          ? data.pageNumber.value
+          : this.pageNumber,
+      wordIndex: data.wordIndex.present ? data.wordIndex.value : this.wordIndex,
+      excerpt: data.excerpt.present ? data.excerpt.value : this.excerpt,
+      note: data.note.present ? data.note.value : this.note,
+      needsReview: data.needsReview.present
+          ? data.needsReview.value
+          : this.needsReview,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      pending: data.pending.present ? data.pending.value : this.pending,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StoredBookmark(')
+          ..write('id: $id, ')
+          ..write('documentId: $documentId, ')
+          ..write('pageNumber: $pageNumber, ')
+          ..write('wordIndex: $wordIndex, ')
+          ..write('excerpt: $excerpt, ')
+          ..write('note: $note, ')
+          ..write('needsReview: $needsReview, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pending: $pending')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    documentId,
+    pageNumber,
+    wordIndex,
+    excerpt,
+    note,
+    needsReview,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    pending,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StoredBookmark &&
+          other.id == this.id &&
+          other.documentId == this.documentId &&
+          other.pageNumber == this.pageNumber &&
+          other.wordIndex == this.wordIndex &&
+          other.excerpt == this.excerpt &&
+          other.note == this.note &&
+          other.needsReview == this.needsReview &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.pending == this.pending);
+}
+
+class BookmarksCompanion extends UpdateCompanion<StoredBookmark> {
+  final Value<String> id;
+  final Value<String> documentId;
+  final Value<int> pageNumber;
+  final Value<int> wordIndex;
+  final Value<String> excerpt;
+  final Value<String> note;
+  final Value<bool> needsReview;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> pending;
+  final Value<int> rowid;
+  const BookmarksCompanion({
+    this.id = const Value.absent(),
+    this.documentId = const Value.absent(),
+    this.pageNumber = const Value.absent(),
+    this.wordIndex = const Value.absent(),
+    this.excerpt = const Value.absent(),
+    this.note = const Value.absent(),
+    this.needsReview = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.pending = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BookmarksCompanion.insert({
+    required String id,
+    required String documentId,
+    required int pageNumber,
+    required int wordIndex,
+    required String excerpt,
+    required String note,
+    this.needsReview = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.pending = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       documentId = Value(documentId),
+       pageNumber = Value(pageNumber),
+       wordIndex = Value(wordIndex),
+       excerpt = Value(excerpt),
+       note = Value(note),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<StoredBookmark> custom({
+    Expression<String>? id,
+    Expression<String>? documentId,
+    Expression<int>? pageNumber,
+    Expression<int>? wordIndex,
+    Expression<String>? excerpt,
+    Expression<String>? note,
+    Expression<bool>? needsReview,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? pending,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (documentId != null) 'document_id': documentId,
+      if (pageNumber != null) 'page_number': pageNumber,
+      if (wordIndex != null) 'word_index': wordIndex,
+      if (excerpt != null) 'excerpt': excerpt,
+      if (note != null) 'note': note,
+      if (needsReview != null) 'needs_review': needsReview,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (pending != null) 'pending': pending,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BookmarksCompanion copyWith({
+    Value<String>? id,
+    Value<String>? documentId,
+    Value<int>? pageNumber,
+    Value<int>? wordIndex,
+    Value<String>? excerpt,
+    Value<String>? note,
+    Value<bool>? needsReview,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? pending,
+    Value<int>? rowid,
+  }) {
+    return BookmarksCompanion(
+      id: id ?? this.id,
+      documentId: documentId ?? this.documentId,
+      pageNumber: pageNumber ?? this.pageNumber,
+      wordIndex: wordIndex ?? this.wordIndex,
+      excerpt: excerpt ?? this.excerpt,
+      note: note ?? this.note,
+      needsReview: needsReview ?? this.needsReview,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      pending: pending ?? this.pending,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (documentId.present) {
+      map['document_id'] = Variable<String>(documentId.value);
+    }
+    if (pageNumber.present) {
+      map['page_number'] = Variable<int>(pageNumber.value);
+    }
+    if (wordIndex.present) {
+      map['word_index'] = Variable<int>(wordIndex.value);
+    }
+    if (excerpt.present) {
+      map['excerpt'] = Variable<String>(excerpt.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (needsReview.present) {
+      map['needs_review'] = Variable<bool>(needsReview.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (pending.present) {
+      map['pending'] = Variable<bool>(pending.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BookmarksCompanion(')
+          ..write('id: $id, ')
+          ..write('documentId: $documentId, ')
+          ..write('pageNumber: $pageNumber, ')
+          ..write('wordIndex: $wordIndex, ')
+          ..write('excerpt: $excerpt, ')
+          ..write('note: $note, ')
+          ..write('needsReview: $needsReview, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('pending: $pending, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$PlayerDatabase extends GeneratedDatabase {
   _$PlayerDatabase(QueryExecutor e) : super(e);
   $PlayerDatabaseManager get managers => $PlayerDatabaseManager(this);
@@ -894,6 +1560,7 @@ abstract class _$PlayerDatabase extends GeneratedDatabase {
     this,
   );
   late final $VerifiedPartsTable verifiedParts = $VerifiedPartsTable(this);
+  late final $BookmarksTable bookmarks = $BookmarksTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -902,6 +1569,7 @@ abstract class _$PlayerDatabase extends GeneratedDatabase {
     readingPositions,
     downloadedBooks,
     verifiedParts,
+    bookmarks,
   ];
 }
 
@@ -1442,6 +2110,326 @@ typedef $$VerifiedPartsTableProcessedTableManager =
       VerifiedPartRow,
       PrefetchHooks Function()
     >;
+typedef $$BookmarksTableCreateCompanionBuilder =
+    BookmarksCompanion Function({
+      required String id,
+      required String documentId,
+      required int pageNumber,
+      required int wordIndex,
+      required String excerpt,
+      required String note,
+      Value<bool> needsReview,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pending,
+      Value<int> rowid,
+    });
+typedef $$BookmarksTableUpdateCompanionBuilder =
+    BookmarksCompanion Function({
+      Value<String> id,
+      Value<String> documentId,
+      Value<int> pageNumber,
+      Value<int> wordIndex,
+      Value<String> excerpt,
+      Value<String> note,
+      Value<bool> needsReview,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> pending,
+      Value<int> rowid,
+    });
+
+class $$BookmarksTableFilterComposer
+    extends Composer<_$PlayerDatabase, $BookmarksTable> {
+  $$BookmarksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get documentId => $composableBuilder(
+    column: $table.documentId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get wordIndex => $composableBuilder(
+    column: $table.wordIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get excerpt => $composableBuilder(
+    column: $table.excerpt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get needsReview => $composableBuilder(
+    column: $table.needsReview,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pending => $composableBuilder(
+    column: $table.pending,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$BookmarksTableOrderingComposer
+    extends Composer<_$PlayerDatabase, $BookmarksTable> {
+  $$BookmarksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get documentId => $composableBuilder(
+    column: $table.documentId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get wordIndex => $composableBuilder(
+    column: $table.wordIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get excerpt => $composableBuilder(
+    column: $table.excerpt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get needsReview => $composableBuilder(
+    column: $table.needsReview,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pending => $composableBuilder(
+    column: $table.pending,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BookmarksTableAnnotationComposer
+    extends Composer<_$PlayerDatabase, $BookmarksTable> {
+  $$BookmarksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get documentId => $composableBuilder(
+    column: $table.documentId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get pageNumber => $composableBuilder(
+    column: $table.pageNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get wordIndex =>
+      $composableBuilder(column: $table.wordIndex, builder: (column) => column);
+
+  GeneratedColumn<String> get excerpt =>
+      $composableBuilder(column: $table.excerpt, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<bool> get needsReview => $composableBuilder(
+    column: $table.needsReview,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get pending =>
+      $composableBuilder(column: $table.pending, builder: (column) => column);
+}
+
+class $$BookmarksTableTableManager
+    extends
+        RootTableManager<
+          _$PlayerDatabase,
+          $BookmarksTable,
+          StoredBookmark,
+          $$BookmarksTableFilterComposer,
+          $$BookmarksTableOrderingComposer,
+          $$BookmarksTableAnnotationComposer,
+          $$BookmarksTableCreateCompanionBuilder,
+          $$BookmarksTableUpdateCompanionBuilder,
+          (
+            StoredBookmark,
+            BaseReferences<_$PlayerDatabase, $BookmarksTable, StoredBookmark>,
+          ),
+          StoredBookmark,
+          PrefetchHooks Function()
+        > {
+  $$BookmarksTableTableManager(_$PlayerDatabase db, $BookmarksTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BookmarksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BookmarksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BookmarksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> documentId = const Value.absent(),
+                Value<int> pageNumber = const Value.absent(),
+                Value<int> wordIndex = const Value.absent(),
+                Value<String> excerpt = const Value.absent(),
+                Value<String> note = const Value.absent(),
+                Value<bool> needsReview = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pending = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BookmarksCompanion(
+                id: id,
+                documentId: documentId,
+                pageNumber: pageNumber,
+                wordIndex: wordIndex,
+                excerpt: excerpt,
+                note: note,
+                needsReview: needsReview,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pending: pending,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String documentId,
+                required int pageNumber,
+                required int wordIndex,
+                required String excerpt,
+                required String note,
+                Value<bool> needsReview = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> pending = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BookmarksCompanion.insert(
+                id: id,
+                documentId: documentId,
+                pageNumber: pageNumber,
+                wordIndex: wordIndex,
+                excerpt: excerpt,
+                note: note,
+                needsReview: needsReview,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                pending: pending,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BookmarksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$PlayerDatabase,
+      $BookmarksTable,
+      StoredBookmark,
+      $$BookmarksTableFilterComposer,
+      $$BookmarksTableOrderingComposer,
+      $$BookmarksTableAnnotationComposer,
+      $$BookmarksTableCreateCompanionBuilder,
+      $$BookmarksTableUpdateCompanionBuilder,
+      (
+        StoredBookmark,
+        BaseReferences<_$PlayerDatabase, $BookmarksTable, StoredBookmark>,
+      ),
+      StoredBookmark,
+      PrefetchHooks Function()
+    >;
 
 class $PlayerDatabaseManager {
   final _$PlayerDatabase _db;
@@ -1452,4 +2440,6 @@ class $PlayerDatabaseManager {
       $$DownloadedBooksTableTableManager(_db, _db.downloadedBooks);
   $$VerifiedPartsTableTableManager get verifiedParts =>
       $$VerifiedPartsTableTableManager(_db, _db.verifiedParts);
+  $$BookmarksTableTableManager get bookmarks =>
+      $$BookmarksTableTableManager(_db, _db.bookmarks);
 }

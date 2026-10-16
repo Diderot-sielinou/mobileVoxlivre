@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:voxlivre/src/core/failure.dart';
 import 'package:voxlivre/src/core/result.dart';
+import 'package:voxlivre/src/features/player/domain/bookmark.dart';
 import 'package:voxlivre/src/features/player/domain/manifest.dart';
 import 'package:voxlivre/src/features/player/domain/offline_book.dart';
 import 'package:voxlivre/src/features/player/domain/player_ports.dart';
@@ -192,6 +193,143 @@ final class FakePlayerGateway implements PlayerGateway {
     saved.add(position);
     return const Result.ok(null);
   }
+
+  /// Marque-pages du serveur, traces comprises (règles de l'ADR-0028).
+  final server = <String, Bookmark>{};
+
+  /// Échec passager de tout appel aux marque-pages.
+  String? bookmarkCode;
+
+  /// Refus définitif (422…) des envois.
+  String? rejectCode;
+  final bookmarkCalls = <String>[];
+
+  /// Appelés pendant un envoi / après la lecture du serveur (gestes de
+  /// l'utilisateur au même moment).
+  Future<void> Function()? beforePut;
+  Future<void> Function()? afterRead;
+
+  @override
+  Future<Result<List<Bookmark>, Failure>> bookmarks(String documentId) async {
+    bookmarkCalls.add('GET $documentId');
+    if (bookmarkCode case final code?) return Result.err(FakeFailure(code));
+    final list = [
+      for (final b in server.values)
+        if (b.documentId == documentId && !b.deleted) b,
+    ];
+    await afterRead?.call();
+    return Result.ok(list);
+  }
+
+  @override
+  Future<Result<Bookmark, Failure>> putBookmark(Bookmark bookmark) async {
+    bookmarkCalls.add('PUT ${bookmark.id}');
+    await beforePut?.call();
+    if (bookmarkCode case final code?) return Result.err(FakeFailure(code));
+    if (rejectCode case final code?) return Result.err(BookmarkRejected(code));
+    final old = server[bookmark.id];
+    final kept = switch (old) {
+      null => bookmark.copyWith(pending: false),
+      // Supprimé plus récemment : la suppression l'emporte.
+      _ when old.deleted && old.deletedAt!.isAfter(bookmark.updatedAt) => old,
+      _ when old.updatedAt.isAfter(bookmark.updatedAt) => old,
+      _ => Bookmark(
+        id: old.id,
+        documentId: old.documentId,
+        pageNumber: old.pageNumber,
+        wordIndex: old.wordIndex,
+        excerpt: old.excerpt,
+        note: bookmark.note,
+        createdAt: old.createdAt,
+        updatedAt: bookmark.updatedAt,
+      ),
+    };
+    server[bookmark.id] = kept;
+    return Result.ok(kept);
+  }
+
+  @override
+  Future<Result<void, Failure>> deleteBookmark(Bookmark bookmark) async {
+    bookmarkCalls.add('DELETE ${bookmark.id}');
+    if (bookmarkCode case final code?) return Result.err(FakeFailure(code));
+    if (rejectCode case final code?) return Result.err(BookmarkRejected(code));
+    final old = server[bookmark.id];
+    if (old != null) {
+      server[bookmark.id] = old.copyWith(deletedAt: bookmark.deletedAt);
+    }
+    return const Result.ok(null);
+  }
+}
+
+/// Marque-pages sur l'appareil, en mémoire.
+final class MemoryBookmarkStore implements BookmarkStore {
+  final rows = <String, Bookmark>{};
+  final _changes = StreamController<void>.broadcast();
+  int clears = 0;
+
+  List<Bookmark> _active(String documentId) =>
+      [
+        for (final b in rows.values)
+          if (b.documentId == documentId && !b.deleted) b,
+      ]..sort(
+        (a, b) => a.pageNumber != b.pageNumber
+            ? a.pageNumber.compareTo(b.pageNumber)
+            : a.wordIndex.compareTo(b.wordIndex),
+      );
+
+  @override
+  Stream<List<Bookmark>> watch(String documentId) {
+    // Abonné d'abord, puis l'état courant : aucun changement perdu.
+    late final StreamController<List<Bookmark>> out;
+    StreamSubscription<void>? sub;
+    out = StreamController<List<Bookmark>>(
+      onListen: () {
+        sub = _changes.stream.listen((_) => out.add(_active(documentId)));
+        out.add(_active(documentId));
+      },
+      onCancel: () => sub?.cancel(),
+    );
+    return out.stream;
+  }
+
+  @override
+  Future<List<Bookmark>> all(String documentId) async => [
+    for (final b in rows.values)
+      if (b.documentId == documentId) b,
+  ];
+
+  @override
+  Future<List<Bookmark>> pending() async => [
+    for (final b in rows.values)
+      if (b.pending) b,
+  ];
+
+  @override
+  Future<void> save(Bookmark bookmark) async {
+    rows[bookmark.id] = bookmark;
+    _changes.add(null);
+  }
+
+  @override
+  Future<void> remove(String id) async {
+    rows.remove(id);
+    _changes.add(null);
+  }
+
+  @override
+  Future<void> clear() async {
+    clears++;
+    rows.clear();
+    _changes.add(null);
+  }
+}
+
+/// Identifiants prévisibles : b-1, b-2…
+final class SequenceIds implements IdGenerator {
+  var _next = 0;
+
+  @override
+  String newId() => 'b-${++_next}';
 }
 
 final class MemoryPositionStore implements PositionStore {

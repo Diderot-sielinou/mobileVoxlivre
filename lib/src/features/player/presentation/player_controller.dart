@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxlivre/src/core/result.dart';
 import 'package:voxlivre/src/features/player/domain/book_text.dart';
+import 'package:voxlivre/src/features/player/domain/bookmark.dart';
 import 'package:voxlivre/src/features/player/domain/manifest.dart';
 import 'package:voxlivre/src/features/player/domain/player_ports.dart';
 import 'package:voxlivre/src/features/player/player_providers.dart';
@@ -34,6 +35,7 @@ final class PlayerViewState {
     this.complete = true,
     this.partsReady = 0,
     this.partCount = 0,
+    this.documentId,
   });
 
   final bool loading;
@@ -52,6 +54,9 @@ final class PlayerViewState {
   final int partsReady;
   final int partCount;
 
+  /// Document du livre : ses marque-pages (ADR-0012).
+  final String? documentId;
+
   PlayerViewState copyWith({
     bool? loading,
     String? errorCode,
@@ -64,6 +69,7 @@ final class PlayerViewState {
     bool? complete,
     int? partsReady,
     int? partCount,
+    String? documentId,
   }) => PlayerViewState(
     loading: loading ?? this.loading,
     errorCode: errorCode ?? this.errorCode,
@@ -76,6 +82,7 @@ final class PlayerViewState {
     complete: complete ?? this.complete,
     partsReady: partsReady ?? this.partsReady,
     partCount: partCount ?? this.partCount,
+    documentId: documentId ?? this.documentId,
   );
 }
 
@@ -155,6 +162,13 @@ final class PlayerController extends Notifier<PlayerViewState> {
           complete: session.manifest.complete,
           partsReady: session.parts.length,
           partCount: session.manifest.partCount,
+          documentId: session.manifest.documentId,
+        );
+        // Marque-pages : envoi de ceux en attente, relecture du serveur.
+        unawaited(
+          ref.read(syncBookmarksProvider)(
+            documentId: session.manifest.documentId,
+          ),
         );
         _listen();
         _refreshTimer = Timer.periodic(manifestRefreshEvery, (_) {
@@ -238,6 +252,59 @@ final class PlayerController extends Notifier<PlayerViewState> {
       wordIndex: position.wordIndex,
       audioMs: position.audioMs,
     );
+  }
+
+  /// Pose un marque-page sur le mot à [position] ; `null` si posé, sinon
+  /// le code de l'échec.
+  Future<String?> addBookmark(int position, String note) async {
+    final text = state.text;
+    final documentId = state.documentId;
+    if (text == null || documentId == null) return 'CONVERSION_NOT_READY';
+    final anchor = text.anchorOf(position);
+    final result = await ref.read(addBookmarkProvider)(
+      documentId,
+      pageNumber: anchor.page,
+      wordIndex: anchor.wordIndex,
+      excerpt: text.excerptAt(position),
+      note: note,
+    );
+    if (result is Ok) _sendBookmarks();
+    return switch (result) {
+      Ok() => null,
+      Err(:final error) => error.code,
+    };
+  }
+
+  /// `null` si la note est changée, sinon le code de l'échec.
+  Future<String?> editBookmark(Bookmark bookmark, String note) async {
+    final result = await ref.read(editBookmarkProvider)(bookmark, note);
+    if (result is Ok) _sendBookmarks();
+    return switch (result) {
+      Ok() => null,
+      Err(:final error) => error.code,
+    };
+  }
+
+  Future<void> deleteBookmark(Bookmark bookmark) async {
+    await ref.read(deleteBookmarkProvider)(bookmark);
+    _sendBookmarks();
+  }
+
+  /// Envoi tout de suite ; sans réseau, il partira plus tard.
+  void _sendBookmarks() => unawaited(ref.read(syncBookmarksProvider)());
+
+  /// Position (dans le texte) du mot d'un marque-page ; `-1` si sa partie
+  /// n'est pas encore prête.
+  int positionOfBookmark(Bookmark bookmark) =>
+      state.text?.positionOfAnchor(bookmark.pageNumber, bookmark.wordIndex) ??
+      -1;
+
+  /// Place la lecture au mot du marque-page ; `false` s'il n'est pas prêt.
+  Future<bool> jumpTo(Bookmark bookmark) async {
+    final position = positionOfBookmark(bookmark);
+    if (position < 0) return false;
+    await seekTo(state.text!.words[position].startMs);
+    return true;
   }
 
   static ({int wordIndex, int audioMs})? _positionOf(PlayerViewState s) {

@@ -64,11 +64,14 @@ Future<void> bootstrap() async {
     container.read(clearLibraryProvider).call,
     container.read(clearPositionsProvider).call,
     container.read(clearDownloadsProvider).call,
+    container.read(clearBookmarksProvider).call,
   ]);
   unawaited(container.read(restoreSessionProvider)());
-  // Positions écrites hors ligne lors d'une session précédente (ADR-0011).
+  // Écrits hors ligne lors d'une session précédente (ADR-0011, ADR-0012).
   if (session.state is SignedIn) {
     unawaited(container.read(flushPositionsProvider)());
+    // Marque-pages posés ou supprimés sans réseau (ADR-0012).
+    unawaited(container.read(syncBookmarksProvider)());
   }
 
   runApp(

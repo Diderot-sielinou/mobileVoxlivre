@@ -40,9 +40,30 @@ class VerifiedParts extends Table {
   Set<Column<Object>> get primaryKey => {conversionId, partIndex};
 }
 
+/// Un marque-page (ADR-0012), trace de suppression comprise.
+@DataClassName('StoredBookmark')
+class Bookmarks extends Table {
+  TextColumn get id => text()();
+  TextColumn get documentId => text()();
+  IntColumn get pageNumber => integer()();
+  IntColumn get wordIndex => integer()();
+  TextColumn get excerpt => text()();
+  TextColumn get note => text()();
+  BoolColumn get needsReview => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get pending => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
 /// Base locale du lecteur (`player.sqlite`), propre à la fonctionnalité
 /// (ADR-0006).
-@DriftDatabase(tables: [ReadingPositions, DownloadedBooks, VerifiedParts])
+@DriftDatabase(
+  tables: [ReadingPositions, DownloadedBooks, VerifiedParts, Bookmarks],
+)
 class PlayerDatabase extends _$PlayerDatabase {
   PlayerDatabase(super.executor);
 
@@ -51,7 +72,7 @@ class PlayerDatabase extends _$PlayerDatabase {
       PlayerDatabase(driftDatabase(name: 'player'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -62,6 +83,8 @@ class PlayerDatabase extends _$PlayerDatabase {
         await m.createTable(downloadedBooks);
         await m.createTable(verifiedParts);
       }
+      // v3 (ADR-0012) : marque-pages.
+      if (from < 3) await m.createTable(bookmarks);
     },
   );
 }

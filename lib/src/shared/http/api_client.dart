@@ -80,7 +80,8 @@ final class ApiClient {
   Future<Result<T, ApiFailure>> delete<T>(
     String path, {
     required Decode<T> decode,
-  }) => _send('DELETE', path, decode);
+    Map<String, Object?>? query,
+  }) => _send('DELETE', path, decode, query: query);
 
   Future<Result<T, ApiFailure>> _send<T>(
     String method,

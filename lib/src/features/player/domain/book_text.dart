@@ -1,3 +1,4 @@
+import 'package:voxlivre/src/features/player/domain/bookmark.dart';
 import 'package:voxlivre/src/features/player/domain/timed_word.dart';
 
 /// Le texte lu, mot à mot, avec ses pages (ADR-0010) : retrouve le mot
@@ -75,6 +76,39 @@ final class BookText {
     }
     return page;
   }
+
+  /// Index global du premier mot de [page], ou `null` si inconnue.
+  int? _pageStart(int page) {
+    for (final start in pageStarts) {
+      if (start.page == page) return start.wordIndex;
+    }
+    return null;
+  }
+
+  /// Ancrage d'un marque-page sur le mot à [position] : page et index du
+  /// mot dans la page (ADR-0012).
+  ({int page, int wordIndex}) anchorOf(int position) {
+    final page = pageOf(position);
+    final start = _pageStart(page) ?? 0;
+    return (page: page, wordIndex: words[position].index - start);
+  }
+
+  /// Position (dans [words]) du mot ancré à ([page], [wordIndex]) ; `-1` si
+  /// sa partie n'est pas chargée (aperçu) ou la page inconnue.
+  int positionOfAnchor(int page, int wordIndex) {
+    final start = _pageStart(page);
+    if (start == null) return -1;
+    final position = positionOfWord(start + wordIndex);
+    return position >= 0 && words[position].index == start + wordIndex
+        ? position
+        : -1;
+  }
+
+  /// Quelques mots à partir de [position] (extrait d'un marque-page).
+  String excerptAt(int position, {int count = bookmarkExcerptWords}) => [
+    for (var i = position; i < words.length && i < position + count; i++)
+      words[i].text,
+  ].join(' ');
 
   /// Les mots regroupés par page, dans l'ordre : (page, première position,
   /// dernière position incluse).

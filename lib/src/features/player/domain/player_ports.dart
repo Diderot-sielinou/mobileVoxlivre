@@ -1,5 +1,6 @@
 import 'package:voxlivre/src/core/failure.dart';
 import 'package:voxlivre/src/core/result.dart';
+import 'package:voxlivre/src/features/player/domain/bookmark.dart';
 import 'package:voxlivre/src/features/player/domain/manifest.dart';
 import 'package:voxlivre/src/features/player/domain/offline_book.dart';
 import 'package:voxlivre/src/features/player/domain/reading_position.dart';
@@ -29,6 +30,17 @@ abstract interface class PlayerGateway {
     void Function(int received)? onBytes,
     Future<void>? cancel,
   });
+
+  /// Marque-pages actifs du document, ancrage vérifié (ADR-0012).
+  Future<Result<List<Bookmark>, Failure>> bookmarks(String documentId);
+
+  /// Crée ou met à jour ; rend l'état retenu par le serveur (`deletedAt`
+  /// renseigné si une suppression plus récente l'emporte). Refus définitif :
+  /// `BookmarkRejected`.
+  Future<Result<Bookmark, Failure>> putBookmark(Bookmark bookmark);
+
+  /// Envoie la suppression (`deletedAt`). Refus définitif : `BookmarkRejected`.
+  Future<Result<void, Failure>> deleteBookmark(Bookmark bookmark);
 }
 
 /// Positions gardées sur l'appareil (hors ligne d'abord).
@@ -46,6 +58,32 @@ abstract interface class PositionStore {
 
   /// Fin de session : tout part (ADR-0006).
   Future<void> clear();
+}
+
+/// Les marque-pages sur l'appareil (ADR-0012), traces de suppression
+/// comprises.
+abstract interface class BookmarkStore {
+  /// Marque-pages actifs du document, à chaque changement.
+  Stream<List<Bookmark>> watch(String documentId);
+
+  /// Tous ceux du document, traces comprises.
+  Future<List<Bookmark>> all(String documentId);
+
+  /// Ceux à envoyer, tous documents.
+  Future<List<Bookmark>> pending();
+
+  /// Crée ou remplace.
+  Future<void> save(Bookmark bookmark);
+
+  Future<void> remove(String id);
+
+  /// Fin de session : tout part.
+  Future<void> clear();
+}
+
+/// Identifiants créés sur l'appareil (UUID v4).
+abstract interface class IdGenerator {
+  String newId();
 }
 
 /// Les livres sur l'appareil (ADR-0011) : fichiers et manifeste.

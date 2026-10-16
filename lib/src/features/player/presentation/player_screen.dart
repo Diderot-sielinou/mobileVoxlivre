@@ -2,8 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxlivre/src/features/player/domain/book_text.dart';
+import 'package:voxlivre/src/features/player/player_providers.dart';
+import 'package:voxlivre/src/features/player/presentation/bookmark_sheets.dart';
 import 'package:voxlivre/src/features/player/presentation/player_controller.dart';
 import 'package:voxlivre/src/shared/design/vox_colors.dart';
 import 'package:voxlivre/src/shared/design/vox_tokens.dart';
@@ -81,52 +84,108 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               ),
           ],
         ),
+        actions: [
+          if (view.documentId case final documentId? when text != null)
+            ..._bookmarkActions(documentId, page, view.wordPosition),
+        ],
       ),
-      body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: VoxGradients.nuit),
-        child: SafeArea(
-          child: view.loading
-              ? const _Loading()
-              : view.errorCode != null
-              ? _Failed(
-                  code: view.errorCode!,
-                  onRetry: () => _controller.open(widget.title),
-                )
-              : Column(
-                  children: [
-                    if (!view.complete)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          VoxSpacing.screenMargin,
-                          VoxSpacing.sm,
-                          VoxSpacing.screenMargin,
-                          0,
-                        ),
-                        child: VoxBanner(
-                          icon: Icons.hourglass_top,
-                          message:
-                              'Aperçu : ${view.partsReady} partie(s) sur '
-                              '${view.partCount} prête(s), la suite arrive.',
-                        ),
-                      ),
-                    Expanded(
-                      child: _BookTextView(
-                        conversionId: widget.conversionId,
-                        text: text!,
-                      ),
-                    ),
-                    _Controls(
-                      view: view,
-                      onToggle: _controller.toggle,
-                      onSeekBy: _controller.seekBy,
-                      onSeekTo: _controller.seekTo,
-                      onSpeed: _controller.setSpeed,
-                    ),
-                  ],
-                ),
+      body: _reading(view),
+    );
+  }
+}
+
+extension on _PlayerScreenState {
+  /// Le texte et les commandes, sur le dégradé « Nuit ».
+  Widget _reading(PlayerViewState view) {
+    final Widget content;
+    if (view.loading) {
+      content = const _Loading();
+    } else if (view.errorCode case final code?) {
+      content = _Failed(
+        code: code,
+        onRetry: () => _controller.open(widget.title),
+      );
+    } else {
+      content = Column(
+        children: [
+          if (!view.complete)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                VoxSpacing.screenMargin,
+                VoxSpacing.sm,
+                VoxSpacing.screenMargin,
+                0,
+              ),
+              child: VoxBanner(
+                icon: Icons.hourglass_top,
+                message:
+                    'Aperçu : ${view.partsReady} partie(s) sur '
+                    '${view.partCount} prête(s), la suite arrive.',
+              ),
+            ),
+          Expanded(
+            child: _BookTextView(
+              conversionId: widget.conversionId,
+              text: view.text!,
+            ),
+          ),
+          _Controls(
+            view: view,
+            onToggle: _controller.toggle,
+            onSeekBy: _controller.seekBy,
+            onSeekTo: _controller.seekTo,
+            onSpeed: _controller.setSpeed,
+          ),
+        ],
+      );
+    }
+    return DecoratedBox(
+      decoration: const BoxDecoration(gradient: VoxGradients.nuit),
+      child: SafeArea(child: content),
+    );
+  }
+
+  /// Poser un marque-page (icône pleine si la page en a déjà un), et la
+  /// liste (ADR-0012).
+  List<Widget> _bookmarkActions(String documentId, int? page, int position) {
+    final marks = ref.watch(bookmarksProvider(documentId)).value ?? const [];
+    final marked = page != null && marks.any((b) => b.pageNumber == page);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    return [
+      IconButton(
+        tooltip: marked
+            ? 'Ajouter un marque-page (page déjà marquée)'
+            : 'Ajouter un marque-page',
+        onPressed: () => addBookmarkAt(
+          context,
+          ref,
+          widget.conversionId,
+          position < 0 ? 0 : position,
+        ),
+        icon: AnimatedSwitcher(
+          duration: reduceMotion ? Duration.zero : VoxMotion.bookmarkFill,
+          child: Icon(
+            marked ? Icons.bookmark : Icons.bookmark_add_outlined,
+            key: ValueKey(marked),
+            color: marked ? context.vox.accent : null,
+          ),
         ),
       ),
-    );
+      IconButton(
+        tooltip: 'Marque-pages (${marks.length})',
+        onPressed: () => showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          showDragHandle: true,
+          sheetAnimationStyle: sheetAnimation(context),
+          builder: (_) => BookmarksSheet(
+            conversionId: widget.conversionId,
+            documentId: documentId,
+          ),
+        ),
+        icon: const Icon(Icons.bookmarks_outlined),
+      ),
+    ];
   }
 }
 
@@ -302,6 +361,17 @@ class _BookTextViewState extends ConsumerState<_BookTextView> {
   }
 }
 
+/// Position du mot sous le caractère [offset] d'une page (mots séparés
+/// d'une espace, de [from] à [to]).
+int wordAtOffset(BookText text, int from, int to, int offset) {
+  var start = 0;
+  for (var i = from; i <= to; i++) {
+    start += text.words[i].text.length + 1;
+    if (offset < start) return i;
+  }
+  return to;
+}
+
 /// Une page : texte simple, sauf la page du mot courant (halo sur la
 /// phrase, pastille sur le mot).
 class _PageBlock extends ConsumerWidget {
@@ -369,10 +439,38 @@ class _PageBlock extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: VoxSpacing.xs),
-          RichText(
-            key: position >= 0 ? currentKey : null,
-            textScaler: MediaQuery.textScalerOf(context),
-            text: TextSpan(style: style, children: [content]),
+          // Appui long sur un mot : marque-page à cet endroit (ADR-0012).
+          Builder(
+            builder: (paragraphContext) => GestureDetector(
+              onLongPressStart: (details) {
+                // Sous le détecteur de gestes : le paragraphe du texte.
+                var node = paragraphContext.findRenderObject();
+                while (node is RenderProxyBox) {
+                  node = node.child;
+                }
+                final paragraph = node;
+                if (paragraph is! RenderParagraph) return;
+                final offset = paragraph
+                    .getPositionForOffset(
+                      paragraph.globalToLocal(details.globalPosition),
+                    )
+                    .offset;
+                unawaited(HapticFeedback.selectionClick());
+                unawaited(
+                  addBookmarkAt(
+                    context,
+                    ref,
+                    conversionId,
+                    wordAtOffset(text, page.from, page.to, offset),
+                  ),
+                );
+              },
+              child: RichText(
+                key: position >= 0 ? currentKey : null,
+                textScaler: MediaQuery.textScalerOf(context),
+                text: TextSpan(style: style, children: [content]),
+              ),
+            ),
           ),
         ],
       ),

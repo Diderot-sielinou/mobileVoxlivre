@@ -74,4 +74,7 @@ abstract final class VoxMotion {
 
   /// Bascule entre deux contenus (champ téléphone / e-mail, bandeau).
   static const swap = Duration(milliseconds: 200);
+
+  /// Marque-page posé : l'icône se remplit.
+  static const bookmarkFill = Duration(milliseconds: 250);
 }

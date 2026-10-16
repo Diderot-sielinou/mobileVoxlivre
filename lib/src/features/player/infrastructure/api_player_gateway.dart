@@ -1,10 +1,12 @@
 import 'package:voxlivre/src/core/failure.dart';
 import 'package:voxlivre/src/core/result.dart';
+import 'package:voxlivre/src/features/player/domain/bookmark.dart';
 import 'package:voxlivre/src/features/player/domain/manifest.dart';
 import 'package:voxlivre/src/features/player/domain/player_ports.dart';
 import 'package:voxlivre/src/features/player/domain/reading_position.dart';
 import 'package:voxlivre/src/features/player/infrastructure/manifest_json.dart';
 import 'package:voxlivre/src/shared/http/api_client.dart';
+import 'package:voxlivre/src/shared/http/api_failure.dart';
 import 'package:voxlivre/src/shared/http/signed_download.dart';
 
 typedef _Json = Map<String, Object?>;
@@ -85,6 +87,78 @@ final class ApiPlayerGateway implements PlayerGateway {
     },
     decode: (_) {},
   );
+
+  @override
+  Future<Result<List<Bookmark>, Failure>> bookmarks(String documentId) =>
+      _api.get(
+        '/v1/documents/$documentId/bookmarks',
+        decode: (r) => [
+          for (final item
+              in ((r.json! as _Json)['items']! as List<Object?>).cast<_Json>())
+            _bookmark(documentId, item),
+        ],
+      );
+
+  @override
+  Future<Result<Bookmark, Failure>> putBookmark(Bookmark bookmark) async =>
+      _rejectable(
+        await _api.put(
+          '/v1/documents/${bookmark.documentId}/bookmarks/${bookmark.id}',
+          body: {
+            'pageNumber': bookmark.pageNumber,
+            'wordIndex': bookmark.wordIndex,
+            'note': bookmark.note,
+            'updatedAt': bookmark.updatedAt.toUtc().toIso8601String(),
+          },
+          decode: (r) => _bookmark(bookmark.documentId, r.json! as _Json),
+        ),
+      );
+
+  @override
+  Future<Result<void, Failure>> deleteBookmark(Bookmark bookmark) async =>
+      _rejectable(
+        await _api.delete(
+          '/v1/documents/${bookmark.documentId}/bookmarks/${bookmark.id}',
+          query: {
+            'deletedAt': (bookmark.deletedAt ?? bookmark.updatedAt)
+                .toUtc()
+                .toIso8601String(),
+          },
+          decode: (_) {},
+        ),
+      );
+
+  /// 400, 404, 409, 422 : le serveur ne changera pas d'avis (ADR-0012).
+  static Result<T, Failure> _rejectable<T>(Result<T, ApiFailure> result) =>
+      switch (result) {
+        Err(:final error)
+            when const {
+              400,
+              404,
+              409,
+              422,
+            }.contains(error.status) =>
+          Result.err(BookmarkRejected(error.code)),
+        Err(:final error) => Result.err(error),
+        Ok(:final value) => Result.ok(value),
+      };
+
+  static Bookmark _bookmark(String documentId, _Json json) {
+    DateTime at(String key) => DateTime.parse(json[key]! as String).toUtc();
+    final deletedAt = json['deletedAt'] as String?;
+    return Bookmark(
+      id: json['id']! as String,
+      documentId: documentId,
+      pageNumber: json['pageNumber']! as int,
+      wordIndex: json['wordIndex']! as int,
+      excerpt: json['excerpt']! as String,
+      note: json['note']! as String,
+      needsReview: json['needsReview'] as bool? ?? false,
+      createdAt: at('createdAt'),
+      updatedAt: at('updatedAt'),
+      deletedAt: deletedAt == null ? null : DateTime.parse(deletedAt).toUtc(),
+    );
+  }
 
   static ReadingPosition _position(_Json json) => ReadingPosition(
     wordIndex: json['wordIndex']! as int,

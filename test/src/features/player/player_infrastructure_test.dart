@@ -8,14 +8,17 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:voxlivre/src/core/failure.dart';
 import 'package:voxlivre/src/core/result.dart';
+import 'package:voxlivre/src/features/player/domain/bookmark.dart';
 import 'package:voxlivre/src/features/player/domain/manifest.dart';
 import 'package:voxlivre/src/features/player/domain/offline_book.dart';
 import 'package:voxlivre/src/features/player/domain/reading_position.dart';
 import 'package:voxlivre/src/features/player/infrastructure/api_player_gateway.dart';
 import 'package:voxlivre/src/features/player/infrastructure/device_book_files.dart';
+import 'package:voxlivre/src/features/player/infrastructure/drift_bookmark_store.dart';
 import 'package:voxlivre/src/features/player/infrastructure/drift_position_store.dart';
 import 'package:voxlivre/src/features/player/infrastructure/manifest_json.dart';
 import 'package:voxlivre/src/features/player/infrastructure/player_database.dart';
+import 'package:voxlivre/src/features/player/infrastructure/uuid_ids.dart';
 import 'package:voxlivre/src/shared/http/signed_download.dart';
 
 import '../../../helpers/fake_http.dart';
@@ -185,6 +188,131 @@ void main() {
         storage.requests.single.headers.keys.map((k) => k.toLowerCase()),
         isNot(contains('authorization')),
       );
+    });
+  });
+
+  group('marque-pages', () {
+    final at = DateTime.utc(2026, 10, 16, 9, 30);
+    final mark = Bookmark(
+      id: 'b-1',
+      documentId: 'd-1',
+      pageNumber: 2,
+      wordIndex: 1,
+      excerpt: 'les contrats.',
+      note: 'à revoir',
+      createdAt: at,
+      updatedAt: at,
+    );
+    Map<String, Object?> wire({String? deletedAt}) => {
+      'id': 'b-1',
+      'pageNumber': 2,
+      'wordIndex': 1,
+      'excerpt': 'les contrats du serveur',
+      'note': 'à revoir',
+      'needsReview': true,
+      'createdAt': '2026-10-16T09:30:00.000Z',
+      'updatedAt': '2026-10-16T09:30:00.000Z',
+      'deletedAt': deletedAt,
+    };
+    ApiPlayerGateway on(FakeHttp api) => ApiPlayerGateway(
+      api.client(),
+      SignedDownload(Dio()..httpClientAdapter = FakeHttp((_) => reply(200))),
+    );
+
+    test('liste, envoi, suppression : chemins, corps, réponse', () async {
+      final api = FakeHttp(
+        (r) => switch (r.method) {
+          'GET' => reply(200, {
+            'items': [wire()],
+          }),
+          'PUT' => reply(201, wire(deletedAt: '2026-10-16T10:00:00.000Z')),
+          _ => reply(204),
+        },
+      );
+      final gateway = on(api);
+
+      final list =
+          (await gateway.bookmarks('d-1') as Ok<List<Bookmark>, Failure>).value;
+      expect(list.single.excerpt, 'les contrats du serveur');
+      expect(list.single.needsReview, isTrue);
+      expect(list.single.documentId, 'd-1');
+
+      final kept =
+          (await gateway.putBookmark(mark) as Ok<Bookmark, Failure>).value;
+      expect(api.requests[1].path, '/v1/documents/d-1/bookmarks/b-1');
+      expect(api.requests[1].data, {
+        'pageNumber': 2,
+        'wordIndex': 1,
+        'note': 'à revoir',
+        'updatedAt': '2026-10-16T09:30:00.000Z',
+      });
+      expect(kept.deleted, isTrue, reason: 'suppression plus récente');
+
+      expect(
+        codeOf(await gateway.deleteBookmark(mark.copyWith(deletedAt: at))),
+        isNull,
+      );
+      expect(api.requests[2].method, 'DELETE');
+      expect(api.requests[2].queryParameters, {
+        'deletedAt': '2026-10-16T09:30:00.000Z',
+      });
+    });
+
+    test('422 et 409 : refus définitif ; 503 et réseau : passager', () async {
+      Future<Failure?> put(int status) async => switch (await on(
+        FakeHttp((_) => reply(status, {'status': status, 'code': 'X_$status'})),
+      ).putBookmark(mark)) {
+        Err(:final error) => error,
+        Ok() => null,
+      };
+      expect(await put(422), isA<BookmarkRejected>());
+      expect((await put(409))?.code, 'X_409');
+      expect(await put(409), isA<BookmarkRejected>());
+      expect(await put(503), isNot(isA<BookmarkRejected>()));
+    });
+
+    test('sur l’appareil : actifs triés, traces, à envoyer, effacer', () async {
+      final db = PlayerDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      final store = DriftBookmarkStore(db);
+      await store.save(mark.copyWith(pending: true));
+      await store.save(
+        Bookmark(
+          id: 'b-0',
+          documentId: 'd-1',
+          pageNumber: 1,
+          wordIndex: 3,
+          excerpt: 'Le droit',
+          note: '',
+          createdAt: at,
+          updatedAt: at,
+        ),
+      );
+      List<String> ids(List<Bookmark> list) => [for (final b in list) b.id];
+
+      expect(ids(await store.watch('d-1').first), ['b-0', 'b-1']);
+      expect(ids(await store.pending()), ['b-1']);
+      final back = (await store.all('d-1')).firstWhere((b) => b.id == 'b-1');
+      expect(back.updatedAt, at);
+      expect(back.updatedAt.isUtc, isTrue);
+      expect(back.note, 'à revoir');
+
+      // Supprimé : plus dans la liste, la trace reste.
+      await store.save(back.copyWith(deletedAt: at));
+      expect(ids(await store.watch('d-1').first), ['b-0']);
+      expect(await store.all('d-1'), hasLength(2));
+
+      await store.remove('b-1');
+      expect(await store.all('d-1'), hasLength(1));
+      await store.clear();
+      expect(await store.all('d-1'), isEmpty);
+    });
+
+    test('UUID v4 différents', () {
+      const ids = UuidIds();
+      final a = ids.newId();
+      expect(a, matches(RegExp(r'^[0-9a-f-]{36}$')));
+      expect(a, isNot(ids.newId()));
     });
   });
 
@@ -406,6 +534,7 @@ void main() {
 
       // Une base v1 (étape 15a) : sans `pending` ni tables des livres.
       final v2 = PlayerDatabase(NativeDatabase(file));
+      await v2.customStatement('DROP TABLE bookmarks');
       await v2.customStatement('DROP TABLE downloaded_books');
       await v2.customStatement('DROP TABLE verified_parts');
       await v2.customStatement(
@@ -427,6 +556,28 @@ void main() {
       expect(await store.pending(), isEmpty);
       expect(await upgraded.select(upgraded.downloadedBooks).get(), isEmpty);
       expect(await upgraded.select(upgraded.verifiedParts).get(), isEmpty);
+      expect(await upgraded.select(upgraded.bookmarks).get(), isEmpty);
     },
   );
+
+  test('migration v2 → v3 : livres gardés, marque-pages créés', () async {
+    final dir = await Directory.systemTemp.createTemp('voxlivre-db');
+    addTearDown(() => dir.delete(recursive: true));
+    final file = File('${dir.path}/player.sqlite');
+
+    // Une base v2 (étape 15b) : sans `bookmarks`.
+    final v3 = PlayerDatabase(NativeDatabase(file));
+    await v3.customStatement('DROP TABLE bookmarks');
+    await v3.customStatement(
+      'INSERT INTO downloaded_books (conversion_id, manifest_json, complete) '
+      "VALUES ('c-1', '{}', 1)",
+    );
+    await v3.customStatement('PRAGMA user_version = 2');
+    await v3.close();
+
+    final upgraded = PlayerDatabase(NativeDatabase(file));
+    addTearDown(upgraded.close);
+    expect(await upgraded.select(upgraded.downloadedBooks).get(), hasLength(1));
+    expect(await DriftBookmarkStore(upgraded).all('d-1'), isEmpty);
+  });
 }
