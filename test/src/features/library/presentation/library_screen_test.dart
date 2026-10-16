@@ -123,6 +123,26 @@ void main() {
     await leave(tester);
   });
 
+  testWidgets('réseau revenu : le bandeau part sans geste', (tester) async {
+    final h = await open(
+      tester,
+      remote: shelf,
+      failure: 'NETWORK_UNAVAILABLE',
+      cached: LibrarySnapshot(
+        items: shelf,
+        refreshedAt: DateTime.utc(2026, 10, 13, 8),
+      ),
+    );
+    expect(find.textContaining('Hors ligne'), findsOneWidget);
+
+    h.library.failure = null;
+    await tester.pump(const Duration(seconds: 30));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Hors ligne'), findsNothing);
+    expect(find.text('Nécessite une connexion'), findsNothing);
+    await leave(tester);
+  });
+
   testWidgets('hors ligne avec un cache : les livres restent, un bandeau', (
     tester,
   ) async {

@@ -18,6 +18,7 @@ import 'package:voxlivre/src/shared/design/widgets/vox_cover.dart';
 import 'package:voxlivre/src/shared/design/widgets/vox_primary_button.dart';
 import 'package:voxlivre/src/shared/design/widgets/vox_timeline.dart';
 import 'package:voxlivre/src/shared/format/durations.dart';
+import 'package:voxlivre/src/shared/widgets/offline_retry.dart';
 
 /// Rythme du rafraîchissement tant que le texte se prépare.
 const documentWorkRefresh = Duration(seconds: 10);
@@ -232,30 +233,35 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _controller.refresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(
-            VoxSpacing.screenMargin,
-            VoxSpacing.sm,
-            VoxSpacing.screenMargin,
-            VoxSpacing.xl,
-          ),
-          children: [
-            if (view.errorCode != null) ...[
-              _ErrorBanner(code: view.errorCode!, cached: sheet != null),
-              const SizedBox(height: VoxSpacing.md),
-            ],
-            _Header(
-              documentId: widget.documentId,
-              title: title,
-              sheet: sheet,
-              pageCount: pageCount,
+      // Hors ligne : nouvel essai au retour du réseau, sans geste.
+      body: OfflineRetry(
+        offline: isOfflineCode(view.errorCode),
+        onRetry: _controller.refresh,
+        child: RefreshIndicator(
+          onRefresh: _controller.refresh,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(
+              VoxSpacing.screenMargin,
+              VoxSpacing.sm,
+              VoxSpacing.screenMargin,
+              VoxSpacing.xl,
             ),
-            const SizedBox(height: VoxSpacing.lg),
-            ..._body(sheet, item, failed: view.errorCode != null),
-          ],
+            children: [
+              if (view.errorCode != null) ...[
+                _ErrorBanner(code: view.errorCode!, cached: sheet != null),
+                const SizedBox(height: VoxSpacing.md),
+              ],
+              _Header(
+                documentId: widget.documentId,
+                title: title,
+                sheet: sheet,
+                pageCount: pageCount,
+              ),
+              const SizedBox(height: VoxSpacing.lg),
+              ..._body(sheet, item, failed: view.errorCode != null),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: _BottomAction(
@@ -743,7 +749,7 @@ class _ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final offline = code == 'NETWORK_UNAVAILABLE' || code == 'TIMEOUT';
+    final offline = isOfflineCode(code);
     if (code == 'DOCUMENT_NOT_FOUND') {
       return const VoxBanner(
         tone: VoxBannerTone.error,

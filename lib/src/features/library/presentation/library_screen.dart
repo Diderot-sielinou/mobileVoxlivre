@@ -15,6 +15,7 @@ import 'package:voxlivre/src/shared/design/vox_tokens.dart';
 import 'package:voxlivre/src/shared/design/widgets/vox_banner.dart';
 import 'package:voxlivre/src/shared/format/durations.dart';
 import 'package:voxlivre/src/shared/time/clock_providers.dart';
+import 'package:voxlivre/src/shared/widgets/offline_retry.dart';
 
 /// Rythme du rafraîchissement tant qu'un livre se prépare (ADR-0006).
 const processingRefresh = Duration(seconds: 15);
@@ -88,19 +89,24 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Bibliothèque')),
-      body: RefreshIndicator(
-        onRefresh: () => _controller.refresh(force: true),
-        child: ListView(
-          // Toujours défilable : « tirer pour rafraîchir » marche aussi sur
-          // une liste courte.
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(
-            VoxSpacing.screenMargin,
-            VoxSpacing.sm,
-            VoxSpacing.screenMargin,
-            VoxSpacing.xl,
+      // Hors ligne : nouvel essai au retour du réseau, sans geste.
+      body: OfflineRetry(
+        offline: isOfflineCode(view.errorCode),
+        onRetry: () => _controller.refresh(force: true),
+        child: RefreshIndicator(
+          onRefresh: () => _controller.refresh(force: true),
+          child: ListView(
+            // Toujours défilable : « tirer pour rafraîchir » marche aussi sur
+            // une liste courte.
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(
+              VoxSpacing.screenMargin,
+              VoxSpacing.sm,
+              VoxSpacing.screenMargin,
+              VoxSpacing.xl,
+            ),
+            children: _content(snapshot, view),
           ),
-          children: _content(snapshot, view),
         ),
       ),
     );
@@ -244,10 +250,6 @@ class _Filters extends StatelessWidget {
     );
   }
 }
-
-/// Le rafraîchissement a échoué faute de réseau.
-bool isOfflineCode(String code) =>
-    code == 'NETWORK_UNAVAILABLE' || code == 'TIMEOUT';
 
 /// Bandeau d'échec du rafraîchissement : hors ligne (avertissement, les
 /// livres en cache restent là) ou serveur indisponible.
