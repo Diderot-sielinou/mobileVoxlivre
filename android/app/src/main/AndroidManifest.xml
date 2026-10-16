@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Réseau : absent jusqu'ici du manifeste principal (seulement debug et
+         profile) — une version release n'aurait eu aucun accès à l'API. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Voxlivre"
         android:name="${applicationName}"
