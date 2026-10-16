@@ -115,16 +115,19 @@ class _Ring extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.vox;
+    // Assez large pour « 100% » en 14 sp à l'intérieur de l'anneau.
     return SizedBox.square(
-      dimension: 44,
+      dimension: 52,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          CircularProgressIndicator(
-            value: percent / 100,
-            strokeWidth: 3,
-            backgroundColor: colors.border,
-            color: colors.accent,
+          Positioned.fill(
+            child: CircularProgressIndicator(
+              value: percent / 100,
+              strokeWidth: 3,
+              backgroundColor: colors.border,
+              color: colors.accent,
+            ),
           ),
           Text(
             '$percent%',
