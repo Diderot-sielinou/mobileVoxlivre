@@ -1,6 +1,7 @@
 import 'package:voxlivre/src/core/failure.dart';
 import 'package:voxlivre/src/core/result.dart';
 import 'package:voxlivre/src/features/player/domain/manifest.dart';
+import 'package:voxlivre/src/features/player/domain/offline_book.dart';
 import 'package:voxlivre/src/features/player/domain/reading_position.dart';
 
 /// Ce que le lecteur demande au backend.
@@ -19,16 +20,64 @@ abstract interface class PlayerGateway {
     String conversionId,
     ReadingPosition position,
   );
+
+  /// Écrit le fichier d'une URL signée dans [path] (ADR-0011). [onBytes]
+  /// reçoit les octets reçus ; [cancel] interrompt (`CANCELLED`).
+  Future<Result<void, Failure>> download(
+    Uri url,
+    String path, {
+    void Function(int received)? onBytes,
+    Future<void>? cancel,
+  });
 }
 
 /// Positions gardées sur l'appareil (hors ligne d'abord).
 abstract interface class PositionStore {
   Future<ReadingPosition?> read(String conversionId);
 
+  /// Écrit la position, « à envoyer » au serveur (ADR-0011).
   Future<void> write(String conversionId, ReadingPosition position);
+
+  /// Le serveur l'a reçue : plus à envoyer (si c'est toujours la même).
+  Future<void> markSent(String conversionId, DateTime recordedAt);
+
+  /// Positions pas encore reçues par le serveur.
+  Future<Map<String, ReadingPosition>> pending();
 
   /// Fin de session : tout part (ADR-0006).
   Future<void> clear();
+}
+
+/// Les livres sur l'appareil (ADR-0011) : fichiers et manifeste.
+abstract interface class BookFiles {
+  /// Le livre enregistré, même partiel, ou `null`.
+  Future<StoredBook?> read(String conversionId);
+
+  /// Enregistre [manifest] (sans ses URL) ; les parties vérifiées restent.
+  Future<void> save(String conversionId, Manifest manifest);
+
+  /// Où écrire un fichier d'une partie.
+  Future<String> pathOf(String conversionId, int index, PartFile file);
+
+  /// Le fichier [path] a-t-il l'empreinte SHA-256 [sha256] ?
+  Future<bool> matches(String path, String sha256);
+
+  Future<void> deleteFile(String path);
+
+  Future<String> readText(String path);
+
+  Future<void> markVerified(String conversionId, int index);
+
+  Future<void> markComplete(String conversionId);
+
+  /// Efface les fichiers et l'enregistrement d'un livre.
+  Future<void> remove(String conversionId);
+
+  /// Fin de session : tous les livres partent.
+  Future<void> clear();
+
+  /// Les livres complets, à chaque changement.
+  Stream<Set<String>> watchComplete();
 }
 
 /// Une partie à jouer : son audio et sa place dans le livre.

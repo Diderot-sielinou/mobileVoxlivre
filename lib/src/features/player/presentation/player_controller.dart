@@ -133,6 +133,8 @@ final class PlayerController extends Notifier<PlayerViewState> {
   Future<void> open(String title) async {
     _title = title;
     state = const PlayerViewState();
+    // Positions écrites sans réseau : elles partent maintenant (ADR-0011).
+    unawaited(ref.read(flushPositionsProvider)());
     final result = await ref.read(openBookProvider)(conversionId);
     if (!ref.mounted) return;
     switch (result) {

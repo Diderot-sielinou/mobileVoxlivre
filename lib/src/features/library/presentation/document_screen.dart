@@ -35,6 +35,10 @@ class DocumentScreen extends ConsumerStatefulWidget {
     required this.onConvert,
     required this.onOpenConversion,
     required this.onListen,
+    this.offlineCard,
+    this.downloaded = const {},
+    this.onRemoveDownload,
+    this.onDeleted,
     super.key,
   });
 
@@ -51,6 +55,20 @@ class DocumentScreen extends ConsumerStatefulWidget {
 
   /// Ouvre le lecteur (ADR-0010).
   final void Function(String conversionId, String title) onListen;
+
+  /// Carte « Écouter sans connexion » d'une conversion terminée, fournie
+  /// par le lecteur (ADR-0011).
+  final Widget Function(String conversionId)? offlineCard;
+
+  /// Conversions dont l'audio est sur le téléphone.
+  final Set<String> downloaded;
+
+  /// Retire l'audio du téléphone (avec confirmation) ; `true` = fait.
+  final Future<bool> Function(String conversionId, String title)?
+  onRemoveDownload;
+
+  /// Document supprimé : l'audio téléchargé de sa conversion part aussi.
+  final ValueChanged<String>? onDeleted;
 
   @override
   ConsumerState<DocumentScreen> createState() => _DocumentScreenState();
@@ -109,6 +127,7 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
       onDelete: _controller.delete,
     );
     if (!deleted || !mounted) return;
+    if (conversion != null) widget.onDeleted?.call(conversion.id);
     // La bibliothèque le retire de son cache ; on la rafraîchit au retour.
     final messenger = ScaffoldMessenger.of(context);
     context.pop();
@@ -125,6 +144,15 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
     );
   }
 
+  Future<void> _removeDownload(String conversionId, String title) async {
+    final removed = await widget.onRemoveDownload?.call(conversionId, title);
+    if ((removed ?? false) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Audio supprimé du téléphone')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final sheet = ref.watch(documentSheetProvider(widget.documentId)).value;
@@ -137,6 +165,10 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
         .firstOrNull;
     final title = sheet?.title ?? item?.title ?? '';
     final pageCount = sheet?.pageCount ?? item?.pageCount;
+    final downloadedId = switch (item?.conversion?.id) {
+      final id? when widget.downloaded.contains(id) => id,
+      _ => null,
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -148,6 +180,10 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
             onSelected: (action) => switch (action) {
               _MenuAction.text => widget.onOpenText(),
               _MenuAction.rename => _rename(title),
+              _MenuAction.removeDownload => _removeDownload(
+                downloadedId!,
+                title,
+              ),
               _MenuAction.delete => _delete(
                 title: title,
                 pageCount: pageCount,
@@ -172,6 +208,15 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
+              if (downloadedId != null && widget.onRemoveDownload != null)
+                const PopupMenuItem(
+                  value: _MenuAction.removeDownload,
+                  child: ListTile(
+                    leading: Icon(Icons.mobile_off_outlined),
+                    title: Text('Supprimer l’audio du téléphone'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
               PopupMenuItem(
                 value: _MenuAction.delete,
                 child: ListTile(
@@ -263,6 +308,11 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
           when item!.status != LibraryStatus.notConverted) ...[
         const SizedBox(height: VoxSpacing.sm),
         _ConversionLine(item: item, conversion: conversion),
+        // Livre entièrement converti : il peut partir sur le téléphone.
+        if (conversion.status == 'ready' && widget.offlineCard != null) ...[
+          const SizedBox(height: VoxSpacing.md),
+          widget.offlineCard!(conversion.id),
+        ],
       ],
       if (sheet.outline.isNotEmpty) ...[
         const SizedBox(height: VoxSpacing.lg),
@@ -272,7 +322,7 @@ class _DocumentScreenState extends ConsumerState<DocumentScreen> {
   }
 }
 
-enum _MenuAction { text, rename, delete }
+enum _MenuAction { text, rename, removeDownload, delete }
 
 /// Couverture, titre, informations (maquette : « 120 pages • 214 300
 /// caractères • Scan (OCR) »).

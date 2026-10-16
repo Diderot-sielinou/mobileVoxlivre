@@ -139,12 +139,26 @@ void main() {
     expect(find.byType(LibraryCard), findsNWidgets(5));
     expect(
       find.text(
-        'Hors ligne : vos livres restent disponibles. '
+        'Hors ligne : vos livres téléchargés restent disponibles. '
         'Dernière mise à jour il y a 2 h.',
       ),
       findsOneWidget,
     );
-    expect(find.byIcon(Icons.cloud_off_outlined), findsOneWidget);
+    // Bandeau + chaque livre non téléchargé (ADR-0011).
+    expect(find.byIcon(Icons.cloud_off_outlined), findsNWidgets(6));
+    expect(find.text('Nécessite une connexion'), findsNWidgets(5));
+    expect(
+      tester
+          .widget<InkWell>(
+            find.descendant(
+              of: find.byType(LibraryCard).first,
+              matching: find.byType(InkWell),
+            ),
+          )
+          .onTap,
+      isNull,
+      reason: 'non cliquable hors ligne',
+    );
     await leave(tester);
   });
 

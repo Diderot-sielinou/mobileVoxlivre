@@ -7,9 +7,17 @@ import 'package:voxlivre/src/shared/format/durations.dart';
 /// « Reprendre la lecture » : le livre écouté le plus récemment, sur le
 /// dégradé « Aube » (en-tête de l'accueil, design system §1.2).
 class ResumeCard extends StatelessWidget {
-  const ResumeCard({required this.item, this.onTap, super.key});
+  const ResumeCard({
+    required this.item,
+    this.onTap,
+    this.needsConnection = false,
+    super.key,
+  });
 
   final LibraryItem item;
+
+  /// Hors ligne et pas téléchargé (ADR-0011) : atténuée, non cliquable.
+  final bool needsConnection;
 
   /// Reprend l'écoute dans le lecteur.
   final VoidCallback? onTap;
@@ -22,13 +30,17 @@ class ResumeCard extends StatelessWidget {
     final remaining = item.remaining;
     final details = [
       if (percent != null) '$percent % lu',
-      if (remaining != null) 'Reste ${VoxFormat.listening(remaining)}',
+      if (needsConnection)
+        'Nécessite une connexion'
+      else if (remaining != null)
+        'Reste ${VoxFormat.listening(remaining)}',
     ].join(' · ');
 
     final radius = BorderRadius.circular(VoxRadius.card);
-    return Semantics(
+    final card = Semantics(
       container: true,
       button: onTap != null,
+      enabled: !needsConnection,
       label: 'Reprendre la lecture. ${item.title}. $details',
       child: ExcludeSemantics(
         child: Ink(
@@ -93,5 +105,6 @@ class ResumeCard extends StatelessWidget {
         ),
       ),
     );
+    return needsConnection ? Opacity(opacity: 0.5, child: card) : card;
   }
 }

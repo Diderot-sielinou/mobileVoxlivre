@@ -55,6 +55,7 @@ typedef Harness = ({
   FakePlayerGateway player,
   MemoryPositionStore positions,
   FakeAudioEngine audio,
+  MemoryBookFiles books,
 });
 
 /// Lance l'app ; avec [token], la session est déjà ouverte ; [onboarded]
@@ -73,9 +74,11 @@ Future<Harness> pumpVoxlivre(
   FakePlayerGateway? player,
   MemoryPositionStore? positions,
   FakeAudioEngine? audio,
+  MemoryBookFiles? books,
   bool settle = true,
 }) async {
   final playerGateway = player ?? FakePlayerGateway();
+  final bookFiles = books ?? MemoryBookFiles(playerGateway.disk);
   final positionStore = positions ?? MemoryPositionStore();
   final audioEngine = audio ?? FakeAudioEngine();
   final conversionGateway = conversions ?? FakeConversionGateway();
@@ -111,6 +114,7 @@ Future<Harness> pumpVoxlivre(
         playerGatewayProvider.overrideWithValue(playerGateway),
         positionStoreProvider.overrideWithValue(positionStore),
         audioEngineProvider.overrideWithValue(audioEngine),
+        bookFilesProvider.overrideWithValue(bookFiles),
       ],
       child: const VoxlivreApp(),
     ),
@@ -136,5 +140,6 @@ Future<Harness> pumpVoxlivre(
     player: playerGateway,
     positions: positionStore,
     audio: audioEngine,
+    books: bookFiles,
   );
 }

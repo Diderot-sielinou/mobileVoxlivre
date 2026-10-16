@@ -3,6 +3,7 @@ import 'package:voxlivre/src/core/result.dart';
 import 'package:voxlivre/src/features/player/domain/manifest.dart';
 import 'package:voxlivre/src/features/player/domain/player_ports.dart';
 import 'package:voxlivre/src/features/player/domain/reading_position.dart';
+import 'package:voxlivre/src/features/player/infrastructure/manifest_json.dart';
 import 'package:voxlivre/src/shared/http/api_client.dart';
 import 'package:voxlivre/src/shared/http/signed_download.dart';
 
@@ -12,9 +13,6 @@ typedef _Json = Map<String, Object?>;
 final class UnsupportedManifest extends Failure {
   const UnsupportedManifest() : super('UNSUPPORTED_MANIFEST');
 }
-
-/// Forme inattendue du manifeste.
-final class _BadManifest implements Exception {}
 
 /// [PlayerGateway] : `voxlivre-api`, et le stockage pour les WebVTT.
 final class ApiPlayerGateway implements PlayerGateway {
@@ -37,7 +35,7 @@ final class ApiPlayerGateway implements PlayerGateway {
           return const Result.err(UnsupportedManifest());
         }
         try {
-          return Result.ok(_manifest(json));
+          return Result.ok(manifestFromJson(json));
           // Version connue mais forme inattendue : même réponse.
           // ignore: avoid_catches_without_on_clauses
         } catch (_) {
@@ -48,6 +46,14 @@ final class ApiPlayerGateway implements PlayerGateway {
 
   @override
   Future<Result<String, Failure>> vtt(Uri url) => _storage.text(url);
+
+  @override
+  Future<Result<void, Failure>> download(
+    Uri url,
+    String path, {
+    void Function(int received)? onBytes,
+    Future<void>? cancel,
+  }) => _storage.toFile(url, path, onProgress: onBytes, cancel: cancel);
 
   @override
   Future<Result<ReadingPosition?, Failure>> position(
@@ -85,43 +91,4 @@ final class ApiPlayerGateway implements PlayerGateway {
     audioMs: json['audioMs']! as int,
     recordedAt: DateTime.parse(json['recordedAt']! as String).toUtc(),
   );
-
-  static Manifest _manifest(_Json json) => Manifest(
-    conversionId: json['conversionId']! as String,
-    documentId: json['documentId']! as String,
-    complete: json['complete']! as bool,
-    partCount: json['partCount']! as int,
-    durationMs: json['durationMs'] as int?,
-    urlsExpireAt: DateTime.parse(json['urlsExpireAt']! as String).toUtc(),
-    parts: [
-      for (final p in (json['parts']! as List<Object?>).cast<_Json>())
-        ManifestPart(
-          index: p['index']! as int,
-          ready: p['status'] == 'ready',
-          firstWordIndex: p['firstWordIndex']! as int,
-          startMs: p['startMs'] as int?,
-          durationMs: p['durationMs'] as int?,
-          wordCount: p['wordCount'] as int?,
-          pageStarts: [
-            for (final s
-                in ((p['pageStarts'] as List<Object?>?) ?? const [])
-                    .cast<_Json>())
-              (page: s['page']! as int, wordIndex: s['wordIndex']! as int),
-          ],
-          audio: _file(p['audio']),
-          vtt: _file(p['vtt']),
-        ),
-    ],
-  );
-
-  static ManifestFile? _file(Object? json) {
-    if (json == null) return null;
-    if (json is! _Json) throw _BadManifest();
-    final url = json['url'] as String?;
-    return ManifestFile(
-      url: url == null ? null : Uri.parse(url),
-      bytes: json['bytes']! as int,
-      sha256: json['sha256']! as String,
-    );
-  }
 }

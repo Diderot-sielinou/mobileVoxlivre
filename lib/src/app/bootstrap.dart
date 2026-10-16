@@ -63,8 +63,13 @@ Future<void> bootstrap() async {
   clearAccountDataOnSignOut(session, [
     container.read(clearLibraryProvider).call,
     container.read(clearPositionsProvider).call,
+    container.read(clearDownloadsProvider).call,
   ]);
   unawaited(container.read(restoreSessionProvider)());
+  // Positions écrites hors ligne lors d'une session précédente (ADR-0011).
+  if (session.state is SignedIn) {
+    unawaited(container.read(flushPositionsProvider)());
+  }
 
   runApp(
     UncontrolledProviderScope(

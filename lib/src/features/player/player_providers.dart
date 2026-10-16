@@ -1,10 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:voxlivre/src/features/player/application/clear_downloads.dart';
 import 'package:voxlivre/src/features/player/application/clear_positions.dart';
+import 'package:voxlivre/src/features/player/application/download_book.dart';
+import 'package:voxlivre/src/features/player/application/flush_positions.dart';
 import 'package:voxlivre/src/features/player/application/load_parts.dart';
 import 'package:voxlivre/src/features/player/application/open_book.dart';
+import 'package:voxlivre/src/features/player/application/remove_download.dart';
 import 'package:voxlivre/src/features/player/application/save_position.dart';
 import 'package:voxlivre/src/features/player/domain/player_ports.dart';
 import 'package:voxlivre/src/features/player/infrastructure/api_player_gateway.dart';
+import 'package:voxlivre/src/features/player/infrastructure/device_book_files.dart';
 import 'package:voxlivre/src/features/player/infrastructure/drift_position_store.dart';
 import 'package:voxlivre/src/features/player/infrastructure/just_audio_engine.dart';
 import 'package:voxlivre/src/features/player/infrastructure/player_database.dart';
@@ -24,6 +30,14 @@ final positionStoreProvider = Provider<PositionStore>(
   (ref) => DriftPositionStore(ref.watch(playerDatabaseProvider)),
 );
 
+/// Livres téléchargés (ADR-0011).
+final bookFilesProvider = Provider<BookFiles>(
+  (ref) => DeviceBookFiles(
+    ref.watch(playerDatabaseProvider),
+    getApplicationSupportDirectory,
+  ),
+);
+
 final playerGatewayProvider = Provider<PlayerGateway>(
   (ref) => ApiPlayerGateway(
     ref.watch(apiClientProvider),
@@ -41,7 +55,10 @@ final audioEngineProvider = Provider.autoDispose<AudioEngine>((ref) {
 });
 
 final loadPartsProvider = Provider<LoadParts>(
-  (ref) => LoadParts(ref.watch(playerGatewayProvider)),
+  (ref) => LoadParts(
+    ref.watch(playerGatewayProvider),
+    ref.watch(bookFilesProvider),
+  ),
 );
 
 final openBookProvider = Provider<OpenBook>(
@@ -49,6 +66,7 @@ final openBookProvider = Provider<OpenBook>(
     ref.watch(playerGatewayProvider),
     ref.watch(positionStoreProvider),
     ref.watch(loadPartsProvider),
+    ref.watch(bookFilesProvider),
   ),
 );
 
@@ -62,4 +80,31 @@ final savePositionProvider = Provider<SavePosition>(
 
 final clearPositionsProvider = Provider<ClearPositions>(
   (ref) => ClearPositions(ref.watch(positionStoreProvider)),
+);
+
+final flushPositionsProvider = Provider<FlushPositions>(
+  (ref) => FlushPositions(
+    ref.watch(positionStoreProvider),
+    ref.watch(playerGatewayProvider),
+  ),
+);
+
+final downloadBookProvider = Provider<DownloadBook>(
+  (ref) => DownloadBook(
+    ref.watch(playerGatewayProvider),
+    ref.watch(bookFilesProvider),
+  ),
+);
+
+final removeDownloadProvider = Provider<RemoveDownload>(
+  (ref) => RemoveDownload(ref.watch(bookFilesProvider)),
+);
+
+final clearDownloadsProvider = Provider<ClearDownloads>(
+  (ref) => ClearDownloads(ref.watch(bookFilesProvider)),
+);
+
+/// Les livres lisibles sans réseau.
+final downloadedBooksProvider = StreamProvider<Set<String>>(
+  (ref) => ref.watch(bookFilesProvider).watchComplete(),
 );

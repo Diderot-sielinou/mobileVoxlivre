@@ -10,9 +10,21 @@ import 'package:voxlivre/src/shared/design/widgets/vox_cover.dart';
 /// Un livre : couverture générée, titre, statut (icône + texte), détail,
 /// et anneau de progression quand la lecture a commencé.
 class LibraryCard extends StatelessWidget {
-  const LibraryCard({required this.item, this.onTap, super.key});
+  const LibraryCard({
+    required this.item,
+    this.onTap,
+    this.downloaded = false,
+    this.needsConnection = false,
+    super.key,
+  });
 
   final LibraryItem item;
+
+  /// Audio sur le téléphone : écoutable sans réseau (ADR-0011).
+  final bool downloaded;
+
+  /// Hors ligne et pas téléchargé : atténué, non cliquable.
+  final bool needsConnection;
 
   /// Ouvre la fiche du document.
   final VoidCallback? onTap;
@@ -22,19 +34,23 @@ class LibraryCard extends StatelessWidget {
     final colors = context.vox;
     final text = Theme.of(context).textTheme;
     final look = statusLook(item.status, colors);
-    final detail = statusDetail(item);
+    final detail = needsConnection
+        ? 'Nécessite une connexion'
+        : statusDetail(item);
     final percent = item.progressPercent;
     final showRing =
         percent != null &&
         (item.status == LibraryStatus.inProgress ||
             item.status == LibraryStatus.finished);
 
-    return Semantics(
+    final card = Semantics(
       container: true,
       button: onTap != null,
+      enabled: !needsConnection,
       label: [
         item.title,
         look.label,
+        if (downloaded) 'Disponible hors ligne',
         if (detail.isNotEmpty) detail,
         if (showRing) '$percent % lu',
       ].join('. '),
@@ -83,11 +99,39 @@ class LibraryCard extends StatelessWidget {
                         ),
                         if (detail.isNotEmpty) ...[
                           const SizedBox(height: 2),
-                          Text(
-                            detail,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: text.bodySmall,
+                          Row(
+                            children: [
+                              if (needsConnection) ...[
+                                Icon(
+                                  Icons.cloud_off_outlined,
+                                  size: 16,
+                                  color: colors.textSecondary,
+                                ),
+                                const SizedBox(width: VoxSpacing.xs),
+                              ],
+                              Flexible(
+                                child: Text(
+                                  detail,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: text.bodySmall,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        if (downloaded) ...[
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.offline_pin_outlined,
+                                size: 16,
+                                color: colors.success,
+                              ),
+                              const SizedBox(width: VoxSpacing.xs),
+                              Text('Hors ligne', style: text.labelMedium),
+                            ],
                           ),
                         ],
                       ],
@@ -104,6 +148,8 @@ class LibraryCard extends StatelessWidget {
         ),
       ),
     );
+    // Désactivé : atténué (0,5) en plus du texte « Nécessite une connexion ».
+    return needsConnection ? Opacity(opacity: 0.5, child: card) : card;
   }
 }
 

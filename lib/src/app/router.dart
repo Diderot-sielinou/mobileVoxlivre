@@ -20,6 +20,8 @@ import 'package:voxlivre/src/features/library/presentation/review_screen.dart';
 import 'package:voxlivre/src/features/onboarding/onboarding_providers.dart';
 import 'package:voxlivre/src/features/onboarding/presentation/onboarding_routes.dart';
 import 'package:voxlivre/src/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:voxlivre/src/features/player/player_providers.dart';
+import 'package:voxlivre/src/features/player/presentation/offline_card.dart';
 import 'package:voxlivre/src/features/player/presentation/player_screen.dart';
 
 /// Chemins des onglets : une constante par route, jamais de chaîne répétée.
@@ -62,6 +64,10 @@ void _listen(BuildContext context, String conversionId, String title) =>
       ),
     );
 
+/// Conversions lisibles sans réseau (ADR-0011).
+Set<String> _downloaded(WidgetRef ref) =>
+    ref.watch(downloadedBooksProvider).value ?? const {};
+
 /// Routeur de l'app, rafraîchi à chaque changement de session.
 final routerProvider = Provider<GoRouter>((ref) {
   final session = ref.watch(authSessionProvider);
@@ -101,12 +107,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: AppRoutes.library,
-                builder: (context, state) => LibraryScreen(
-                  onImport: () => context.go(AppRoutes.import),
-                  onOpenDocument: (id) =>
-                      context.push('${AppRoutes.library}/documents/$id'),
-                  onListen: (conversionId, title) =>
-                      _listen(context, conversionId, title),
+                // Livres téléchargés fournis par le lecteur (ADR-0011).
+                builder: (context, state) => Consumer(
+                  builder: (context, ref, _) => LibraryScreen(
+                    onImport: () => context.go(AppRoutes.import),
+                    onOpenDocument: (id) =>
+                        context.push('${AppRoutes.library}/documents/$id'),
+                    onListen: (conversionId, title) =>
+                        _listen(context, conversionId, title),
+                    downloaded: _downloaded(ref),
+                  ),
                 ),
                 routes: [
                   // Lecteur (ADR-0010), ouvert par la route comme la
@@ -125,28 +135,47 @@ final routerProvider = Provider<GoRouter>((ref) {
                     // Une clé par document : passer d'une fiche à une autre
                     // (après un import) donne un nouvel état, donc une
                     // nouvelle lecture.
-                    builder: (context, state) => DocumentScreen(
-                      key: ValueKey(state.pathParameters['id']),
-                      documentId: state.pathParameters['id']!,
-                      onOpenText: () => context.push(
-                        '${AppRoutes.library}/documents/'
-                        '${state.pathParameters['id']}/text',
+                    builder: (context, state) => Consumer(
+                      builder: (context, ref, _) => DocumentScreen(
+                        key: ValueKey(state.pathParameters['id']),
+                        documentId: state.pathParameters['id']!,
+                        onOpenText: () => context.push(
+                          '${AppRoutes.library}/documents/'
+                          '${state.pathParameters['id']}/text',
+                        ),
+                        onConvert: (title, chars) => context.push(
+                          Uri(
+                            path:
+                                '${AppRoutes.library}/documents/'
+                                '${state.pathParameters['id']}/convert',
+                            queryParameters: {
+                              'title': title,
+                              'chars': '$chars',
+                            },
+                          ).toString(),
+                        ),
+                        onOpenConversion: (conversionId) => context.push(
+                          '${AppRoutes.library}/documents/'
+                          '${state.pathParameters['id']}/conversions/'
+                          '$conversionId',
+                        ),
+                        onListen: (conversionId, title) =>
+                            _listen(context, conversionId, title),
+                        // Écoute hors ligne, fournie par le lecteur (ADR-0011).
+                        offlineCard: (conversionId) =>
+                            OfflineCard(conversionId: conversionId),
+                        downloaded: _downloaded(ref),
+                        onRemoveDownload: (conversionId, title) async {
+                          if (!await confirmRemoveDownload(context, title)) {
+                            return false;
+                          }
+                          await ref.read(removeDownloadProvider)(conversionId);
+                          return true;
+                        },
+                        onDeleted: (conversionId) => unawaited(
+                          ref.read(removeDownloadProvider)(conversionId),
+                        ),
                       ),
-                      onConvert: (title, chars) => context.push(
-                        Uri(
-                          path:
-                              '${AppRoutes.library}/documents/'
-                              '${state.pathParameters['id']}/convert',
-                          queryParameters: {'title': title, 'chars': '$chars'},
-                        ).toString(),
-                      ),
-                      onOpenConversion: (conversionId) => context.push(
-                        '${AppRoutes.library}/documents/'
-                        '${state.pathParameters['id']}/conversions/'
-                        '$conversionId',
-                      ),
-                      onListen: (conversionId, title) =>
-                          _listen(context, conversionId, title),
                     ),
                     routes: [
                       // Passage vers la conversion par la route (ADR-0008).

@@ -116,13 +116,16 @@ void main() {
   group('cas d’usage', () {
     late FakePlayerGateway gateway;
     late MemoryPositionStore store;
+    late MemoryBookFiles files;
 
     setUp(() {
       gateway = FakePlayerGateway();
       store = MemoryPositionStore();
+      files = MemoryBookFiles(gateway.disk);
     });
 
-    OpenBook open() => OpenBook(gateway, store, LoadParts(gateway));
+    OpenBook open() =>
+        OpenBook(gateway, store, LoadParts(gateway, files), files);
 
     test('ouvre : texte des deux parties, audio, sans position', () async {
       final session = (await open()('c-1') as Ok<BookSession, Failure>).value;
@@ -181,7 +184,7 @@ void main() {
 
     test('LoadParts à partir d’une partie (aperçu)', () async {
       final loaded =
-          (await LoadParts(gateway)(testManifest(), fromIndex: 1)
+          (await LoadParts(gateway, files)(testManifest(), fromIndex: 1)
                   as Ok<LoadedParts, Failure>)
               .value;
       expect(loaded.audio.map((p) => p.index), [1]);

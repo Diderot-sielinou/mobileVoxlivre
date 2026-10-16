@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:voxlivre/src/features/library/domain/library_item.dart';
 import 'package:voxlivre/src/features/library/domain/library_shelf.dart';
 import 'package:voxlivre/src/features/library/domain/library_snapshot.dart';
 import 'package:voxlivre/src/features/library/library_providers.dart';
@@ -24,6 +25,7 @@ class LibraryScreen extends ConsumerStatefulWidget {
     required this.onImport,
     required this.onOpenDocument,
     required this.onListen,
+    this.downloaded = const {},
     super.key,
   });
 
@@ -35,6 +37,9 @@ class LibraryScreen extends ConsumerStatefulWidget {
 
   /// Ouvre le lecteur d'une conversion (ADR-0010).
   final void Function(String conversionId, String title) onListen;
+
+  /// Conversions dont l'audio est sur le téléphone (ADR-0011).
+  final Set<String> downloaded;
 
   @override
   ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
@@ -136,6 +141,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       ];
     }
 
+    // Hors ligne, seuls les livres téléchargés restent ouvrables.
+    final offline = error != null && isOfflineCode(error);
+    bool isDownloaded(LibraryItem item) =>
+        widget.downloaded.contains(item.conversion?.id);
     final resume = LibraryShelf.resume(items);
     final counts = LibraryShelf.counts(items);
     final shown = items.where(view.filter.matches).toList();
@@ -151,12 +160,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       if (resume != null) ...[
         ResumeCard(
           item: resume,
+          needsConnection: offline && !isDownloaded(resume),
           onTap: switch (resume.conversion) {
-            final conversion? => () => widget.onListen(
-              conversion.id,
-              resume.title,
-            ),
-            null => null,
+            final conversion? when !offline || isDownloaded(resume) =>
+              () => widget.onListen(conversion.id, resume.title),
+            _ => null,
           },
         ),
         const SizedBox(height: VoxSpacing.lg),
@@ -185,7 +193,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             child: LibraryCard(
               key: ValueKey(item.documentId),
               item: item,
-              onTap: () => widget.onOpenDocument(item.documentId),
+              downloaded: isDownloaded(item),
+              needsConnection: offline && !isDownloaded(item),
+              onTap: offline && !isDownloaded(item)
+                  ? null
+                  : () => widget.onOpenDocument(item.documentId),
             ),
           ),
         ),
@@ -233,6 +245,10 @@ class _Filters extends StatelessWidget {
   }
 }
 
+/// Le rafraîchissement a échoué faute de réseau.
+bool isOfflineCode(String code) =>
+    code == 'NETWORK_UNAVAILABLE' || code == 'TIMEOUT';
+
 /// Bandeau d'échec du rafraîchissement : hors ligne (avertissement, les
 /// livres en cache restent là) ou serveur indisponible.
 class _ErrorBanner extends StatelessWidget {
@@ -244,12 +260,12 @@ class _ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final offline = code == 'NETWORK_UNAVAILABLE' || code == 'TIMEOUT';
+    final offline = isOfflineCode(code);
     final since = refreshedAt != null && now != null
         ? ' Dernière mise à jour ${VoxFormat.ago(refreshedAt!, now!)}.'
         : '';
     final message = offline
-        ? 'Hors ligne : vos livres restent disponibles.$since'
+        ? 'Hors ligne : vos livres téléchargés restent disponibles.$since'
         : 'Service momentanément indisponible. Tirez vers le bas pour '
               'réessayer.$since';
     return VoxBanner(

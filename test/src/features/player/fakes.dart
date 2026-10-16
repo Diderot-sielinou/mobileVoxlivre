@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:voxlivre/src/core/failure.dart';
 import 'package:voxlivre/src/core/result.dart';
 import 'package:voxlivre/src/features/player/domain/manifest.dart';
+import 'package:voxlivre/src/features/player/domain/offline_book.dart';
 import 'package:voxlivre/src/features/player/domain/player_ports.dart';
 import 'package:voxlivre/src/features/player/domain/reading_position.dart';
 
@@ -88,18 +89,75 @@ const vtts = {
   'https://s.test/p1.vtt': ['règle', 'les', 'contrats.', 'Fin'],
 };
 
-/// Backend du lecteur en mémoire.
+/// Un fichier « sur l'appareil » : son empreinte et son contenu.
+typedef DiskFile = ({String sha256, String content});
+
+/// Backend du lecteur en mémoire. Les téléchargements s'écrivent dans
+/// [disk] (partagé avec [MemoryBookFiles]).
 final class FakePlayerGateway implements PlayerGateway {
-  FakePlayerGateway({Manifest? manifest, this.remote})
-    : current = manifest ?? testManifest();
+  FakePlayerGateway({
+    Manifest? manifest,
+    this.remote,
+    Map<String, DiskFile>? disk,
+  }) : current = manifest ?? testManifest(),
+       disk = disk ?? {};
 
   Manifest current;
   ReadingPosition? remote;
   String? manifestCode;
   String? vttCode;
   String? positionCode;
+  String? saveCode;
   final saved = <ReadingPosition>[];
   int manifests = 0;
+
+  final Map<String, DiskFile> disk;
+  final downloads = <Uri>[];
+
+  /// Code d'échec par URL (une fois chacun).
+  final failOnce = <String, String>{};
+
+  /// URL dont le fichier reçu est abîmé (toujours).
+  final corrupt = <String>{};
+
+  /// Bloque les téléchargements tant qu’il n’est pas complété.
+  Completer<void>? hold;
+
+  /// Bloque la lecture de la position (serveur muet).
+  Completer<void>? positionHold;
+
+  @override
+  Future<Result<void, Failure>> download(
+    Uri url,
+    String path, {
+    void Function(int received)? onBytes,
+    Future<void>? cancel,
+  }) async {
+    downloads.add(url);
+    if (hold case final hold?) {
+      var cancelled = false;
+      await Future.any([
+        hold.future,
+        if (cancel != null) cancel.then((_) => cancelled = true),
+      ]);
+      if (cancelled) return const Result.err(FakeFailure('CANCELLED'));
+    }
+    final key = url.toString();
+    if (failOnce.remove(key) case final code?) {
+      return Result.err(FakeFailure(code));
+    }
+    final isVtt = url.path.endsWith('.vtt');
+    final file = isVtt ? 'b' : 'a';
+    onBytes?.call(1);
+    final words = vtts[key.split('?').first];
+    disk[path] = (
+      sha256: corrupt.contains(key) ? 'bad' : file,
+      content: isVtt && words != null
+          ? vttOf(words, first: key.contains('p1.vtt') ? 4 : 0)
+          : 'mp3',
+    );
+    return const Result.ok(null);
+  }
 
   @override
   Future<Result<Manifest, Failure>> manifest(String conversionId) async {
@@ -120,6 +178,7 @@ final class FakePlayerGateway implements PlayerGateway {
   Future<Result<ReadingPosition?, Failure>> position(
     String conversionId,
   ) async {
+    await positionHold?.future;
     if (positionCode case final code?) return Result.err(FakeFailure(code));
     return Result.ok(remote);
   }
@@ -129,6 +188,7 @@ final class FakePlayerGateway implements PlayerGateway {
     String conversionId,
     ReadingPosition position,
   ) async {
+    if (saveCode case final code?) return Result.err(FakeFailure(code));
     saved.add(position);
     return const Result.ok(null);
   }
@@ -140,17 +200,160 @@ final class MemoryPositionStore implements PositionStore {
   ReadingPosition? position;
   int clears = 0;
 
+  /// Positions à envoyer, par conversion.
+  final unsent = <String, ReadingPosition>{};
+
   @override
   Future<ReadingPosition?> read(String conversionId) async => position;
 
   @override
-  Future<void> write(String conversionId, ReadingPosition p) async =>
-      position = p;
+  Future<void> write(String conversionId, ReadingPosition p) async {
+    position = p;
+    unsent[conversionId] = p;
+  }
+
+  @override
+  Future<void> markSent(String conversionId, DateTime recordedAt) async {
+    if (unsent[conversionId]?.recordedAt == recordedAt) {
+      unsent.remove(conversionId);
+    }
+  }
+
+  @override
+  Future<Map<String, ReadingPosition>> pending() async => {...unsent};
 
   @override
   Future<void> clear() async {
     clears++;
     position = null;
+    unsent.clear();
+  }
+}
+
+/// Livres téléchargés en mémoire, sur le [disk] du faux backend.
+final class MemoryBookFiles implements BookFiles {
+  MemoryBookFiles(this.disk);
+
+  final Map<String, DiskFile> disk;
+  final _books =
+      <String, ({Manifest manifest, Set<int> verified, bool complete})>{};
+  final _changes = StreamController<Set<String>>.broadcast();
+  int clears = 0;
+
+  Set<String> get _complete => {
+    for (final MapEntry(:key, :value) in _books.entries)
+      if (value.complete) key,
+  };
+
+  void _changed() => _changes.add(_complete);
+
+  @override
+  Future<StoredBook?> read(String conversionId) async {
+    final book = _books[conversionId];
+    if (book == null) return null;
+    ManifestFile? local(ManifestFile? f, String path, {required bool ok}) =>
+        f == null
+        ? null
+        : ManifestFile(
+            url: ok ? Uri.file(path) : null,
+            bytes: f.bytes,
+            sha256: f.sha256,
+          );
+    final m = book.manifest;
+    return StoredBook(
+      verified: {...book.verified},
+      complete: book.complete,
+      manifest: Manifest(
+        conversionId: m.conversionId,
+        documentId: m.documentId,
+        complete: m.complete,
+        partCount: m.partCount,
+        durationMs: m.durationMs,
+        urlsExpireAt: DateTime.utc(9999),
+        parts: [
+          for (final p in m.parts)
+            ManifestPart(
+              index: p.index,
+              ready: p.ready,
+              firstWordIndex: p.firstWordIndex,
+              startMs: p.startMs,
+              durationMs: p.durationMs,
+              wordCount: p.wordCount,
+              pageStarts: p.pageStarts,
+              audio: local(
+                p.audio,
+                '/books/$conversionId/part-${p.index}.mp3',
+                ok: book.verified.contains(p.index),
+              ),
+              vtt: local(
+                p.vtt,
+                '/books/$conversionId/part-${p.index}.vtt',
+                ok: book.verified.contains(p.index),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Future<void> save(String conversionId, Manifest manifest) async {
+    final old = _books[conversionId];
+    _books[conversionId] = (
+      manifest: manifest,
+      verified: old?.verified ?? <int>{},
+      complete: old?.complete ?? false,
+    );
+  }
+
+  @override
+  Future<String> pathOf(String conversionId, int index, PartFile file) async =>
+      '/books/$conversionId/part-$index.${file == PartFile.audio ? 'mp3' : 'vtt'}';
+
+  @override
+  Future<bool> matches(String path, String sha256) async =>
+      disk[path]?.sha256 == sha256;
+
+  @override
+  Future<void> deleteFile(String path) async => disk.remove(path);
+
+  @override
+  Future<String> readText(String path) async => disk[path]!.content;
+
+  @override
+  Future<void> markVerified(String conversionId, int index) async =>
+      _books[conversionId]!.verified.add(index);
+
+  @override
+  Future<void> markComplete(String conversionId) async {
+    final book = _books[conversionId]!;
+    _books[conversionId] = (
+      manifest: book.manifest,
+      verified: book.verified,
+      complete: true,
+    );
+    _changed();
+  }
+
+  @override
+  Future<void> remove(String conversionId) async {
+    _books.remove(conversionId);
+    disk.removeWhere((path, _) => path.startsWith('/books/$conversionId/'));
+    _changed();
+  }
+
+  @override
+  Future<void> clear() async {
+    clears++;
+    _books.clear();
+    disk.clear();
+    _changed();
+  }
+
+  @override
+  Stream<Set<String>> watchComplete() async* {
+    yield _complete;
+    yield* _changes.stream;
   }
 }
 
