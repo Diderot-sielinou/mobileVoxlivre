@@ -68,6 +68,11 @@ final class WalletEntry {
   final DateTime createdAt;
   final String? offerCode;
   final String? conversionId;
+
+  /// Crédits offerts à la création du compte (offre `welcome`, hors
+  /// catalogue : ADR-0030 du backend).
+  bool get isWelcomeGift =>
+      kind == WalletEntryKind.purchase && offerCode == 'welcome';
 }
 
 /// Une page de l'historique ; [nextCursor] `null` : fin.

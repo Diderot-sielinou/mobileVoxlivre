@@ -254,6 +254,7 @@ class _UnitsHistoryScreenState extends ConsumerState<UnitsHistoryScreen> {
       final id? => widget.titleOf?.call(id),
       null => null,
     };
+    if (entry.isWelcomeGift) return 'Crédits offerts';
     return switch (entry.kind) {
       WalletEntryKind.purchase => switch (offers
           .where((o) => o.code == entry.offerCode)
