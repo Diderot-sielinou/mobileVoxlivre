@@ -42,6 +42,7 @@ final AppConfig testConfig = switch (AppConfig.parse(
   apiBaseUrl: 'https://api.test',
   siteUrl: 'https://site.test',
   supportEmail: 'aide@site.test',
+  googleServerClientId: 'test-web.apps.googleusercontent.com',
 )) {
   Ok(:final value) => value,
   Err(:final error) => throw StateError(error.message),
@@ -87,6 +88,7 @@ final class FixedClock implements Clock {
 /// L'app entière, ports remplacés par des faux.
 typedef Harness = ({
   FakeAuthGateway gateway,
+  FakeGoogleAccount google,
   AuthSession session,
   MemorySessionStore store,
   FixedClock clock,
@@ -152,6 +154,7 @@ Future<Harness> pumpVoxlivre(
   final sheets = documents ?? FakeDocumentRepository();
   final onboarding = MemoryOnboardingStore(completed: onboarded);
   final gateway = FakeAuthGateway();
+  final google = FakeGoogleAccount();
   final store = MemorySessionStore(token);
   final session = AuthSession(store, token: token);
   final clock = FixedClock(DateTime.utc(2026, 10, 13, 10));
@@ -167,6 +170,10 @@ Future<Harness> pumpVoxlivre(
         appConfigProvider.overrideWithValue(testConfig),
         authSessionProvider.overrideWithValue(session),
         authGatewayProvider.overrideWithValue(gateway),
+        googleAccountProvider.overrideWithValue(google),
+        googleServerClientIdProvider.overrideWithValue(
+          testConfig.googleServerClientId,
+        ),
         clockProvider.overrideWithValue(clock),
         onboardingStoreProvider.overrideWithValue(onboarding),
         libraryRepositoryProvider.overrideWithValue(shelf),
@@ -200,6 +207,7 @@ Future<Harness> pumpVoxlivre(
   }
   return (
     gateway: gateway,
+    google: google,
     session: session,
     store: store,
     clock: clock,

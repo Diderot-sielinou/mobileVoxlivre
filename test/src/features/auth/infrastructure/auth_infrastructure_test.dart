@@ -5,9 +5,11 @@ import 'package:voxlivre/src/core/result.dart';
 import 'package:voxlivre/src/features/auth/application/auth_session.dart';
 import 'package:voxlivre/src/features/auth/domain/current_user.dart';
 import 'package:voxlivre/src/features/auth/domain/email_address.dart';
+import 'package:voxlivre/src/features/auth/domain/google_account.dart';
 import 'package:voxlivre/src/features/auth/domain/phone_number.dart';
 import 'package:voxlivre/src/features/auth/domain/sign_in_target.dart';
 import 'package:voxlivre/src/features/auth/infrastructure/better_auth_gateway.dart';
+import 'package:voxlivre/src/features/auth/infrastructure/sdk_google_account.dart';
 import 'package:voxlivre/src/features/auth/infrastructure/secure_session_store.dart';
 import 'package:voxlivre/src/features/auth/infrastructure/session_token_source.dart';
 
@@ -40,6 +42,21 @@ void main() {
       expect(http.requests.last.data, {
         'email': 'lecteur@mail.com',
         'type': 'sign-in',
+      });
+    });
+
+    test('échange l’ID token Google contre le jeton signé', () async {
+      final http = FakeHttp((_) => reply(200, {}, {'set-auth-token': 'signé'}));
+      final gateway = BetterAuthGateway(http.client());
+
+      expect(
+        await gateway.signInWithGoogle('id-token'),
+        const Result<String, Object>.ok('signé'),
+      );
+      expect(http.requests.single.path, '/api/auth/sign-in/social');
+      expect(http.requests.single.data, {
+        'provider': 'google',
+        'idToken': {'token': 'id-token'},
       });
     });
 
@@ -129,6 +146,21 @@ void main() {
       expect(http.requests.last.method, 'POST');
     });
   });
+
+  test(
+    'SdkGoogleAccount sans client : indisponible, sans appel au SDK',
+    () async {
+      final google = SdkGoogleAccount(null);
+
+      final result = await google.idToken();
+
+      expect(
+        (result as Err<String, Object>).error,
+        isA<GoogleSignInUnavailable>(),
+      );
+      await google.forget();
+    },
+  );
 
   group('SecureSessionStore', () {
     test('écrit, lit et efface le jeton', () async {

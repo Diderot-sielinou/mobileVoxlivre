@@ -109,4 +109,29 @@ void main() {
       }
     });
   });
+
+  test('client Google (ADR-0015) : facultatif, mais un vrai identifiant', () {
+    AppConfig parse(String google) => switch (AppConfig.parse(
+      env: 'prod',
+      apiBaseUrl: 'https://api.x.test',
+      googleServerClientId: google,
+    )) {
+      Ok(:final value) => value,
+      Err(:final error) => throw StateError(error.message),
+    };
+    expect(parse('').googleServerClientId, isNull);
+    expect(
+      parse(' 1-ab.apps.googleusercontent.com ').googleServerClientId,
+      '1-ab.apps.googleusercontent.com',
+    );
+    final wrong = AppConfig.parse(
+      env: 'prod',
+      apiBaseUrl: 'https://api.x.test',
+      googleServerClientId: 'secret-GOCSPX',
+    );
+    expect(
+      (wrong as Err<AppConfig, InvalidConfigFailure>).error.message,
+      contains('GOOGLE_SERVER_CLIENT_ID'),
+    );
+  });
 }

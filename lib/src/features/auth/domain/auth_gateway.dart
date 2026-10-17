@@ -13,6 +13,9 @@ abstract interface class AuthGateway {
   /// Valide [code] pour [target] ; rend le jeton de session signé.
   Future<Result<String, Failure>> verifyCode(SignInTarget target, String code);
 
+  /// Échange l'ID token Google [idToken] contre le jeton de session signé.
+  Future<Result<String, Failure>> signInWithGoogle(String idToken);
+
   /// Le compte de la session courante.
   Future<Result<CurrentUser, Failure>> currentUser();
 

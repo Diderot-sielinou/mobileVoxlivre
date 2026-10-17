@@ -19,6 +19,7 @@ final class AppConfig {
     required this.apiBaseUrl,
     this.siteUrl,
     this.supportEmail,
+    this.googleServerClientId,
   });
 
   final AppEnv env;
@@ -32,6 +33,10 @@ final class AppConfig {
   /// Adresse de l'aide, facultative.
   final String? supportEmail;
 
+  /// Client OAuth **Web** de Google, audience des ID tokens envoyés au
+  /// backend (ADR-0015) ; absent : pas de connexion Google.
+  final String? googleServerClientId;
+
   /// Conditions d'utilisation, si le site est configuré.
   Uri? get termsUrl => siteUrl?.resolve('conditions');
 
@@ -44,6 +49,9 @@ final class AppConfig {
     apiBaseUrl: const String.fromEnvironment('API_BASE_URL'),
     siteUrl: const String.fromEnvironment('SITE_URL'),
     supportEmail: const String.fromEnvironment('SUPPORT_EMAIL'),
+    googleServerClientId: const String.fromEnvironment(
+      'GOOGLE_SERVER_CLIENT_ID',
+    ),
   );
 
   /// Valide des valeurs brutes ; séparé de [fromEnvironment] pour les tests.
@@ -52,6 +60,7 @@ final class AppConfig {
     required String apiBaseUrl,
     String? siteUrl,
     String? supportEmail,
+    String? googleServerClientId,
   }) {
     final knownEnv = AppEnv.values.where((e) => e.name == env).firstOrNull;
     if (knownEnv == null) {
@@ -103,6 +112,16 @@ final class AppConfig {
         ),
       );
     }
+    final google = (googleServerClientId ?? '').trim();
+    if (google.isNotEmpty &&
+        !RegExp(r'^[\w-]+\.apps\.googleusercontent\.com$').hasMatch(google)) {
+      return Result.err(
+        InvalidConfigFailure(
+          'GOOGLE_SERVER_CLIENT_ID doit être un identifiant de client OAuth '
+          'Google (reçu : "$googleServerClientId")',
+        ),
+      );
+    }
     final path = url.path.endsWith('/')
         ? url.path.substring(0, url.path.length - 1)
         : url.path;
@@ -112,6 +131,7 @@ final class AppConfig {
         apiBaseUrl: url.replace(path: path),
         siteUrl: site,
         supportEmail: email.isEmpty ? null : email,
+        googleServerClientId: google.isEmpty ? null : google,
       ),
     );
   }

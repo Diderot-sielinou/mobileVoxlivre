@@ -1,18 +1,22 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:voxlivre/src/core/failure.dart';
 import 'package:voxlivre/src/core/result.dart';
 import 'package:voxlivre/src/features/auth/application/auth_session.dart';
 import 'package:voxlivre/src/features/auth/application/request_code.dart';
 import 'package:voxlivre/src/features/auth/application/restore_session.dart';
+import 'package:voxlivre/src/features/auth/application/sign_in_with_google.dart';
 import 'package:voxlivre/src/features/auth/application/sign_out.dart';
 import 'package:voxlivre/src/features/auth/application/verify_code.dart';
 import 'package:voxlivre/src/features/auth/domain/current_user.dart';
 import 'package:voxlivre/src/features/auth/domain/email_address.dart';
+import 'package:voxlivre/src/features/auth/domain/google_account.dart';
 import 'package:voxlivre/src/features/auth/domain/sign_in_target.dart';
 
 import '../fakes.dart';
 
 void main() {
   late FakeAuthGateway gateway;
+  late FakeGoogleAccount google;
   late MemorySessionStore store;
   final target = switch (EmailAddress.parse('lecteur@mail.com')) {
     Ok(:final value) => EmailTarget(value),
@@ -21,6 +25,7 @@ void main() {
 
   setUp(() {
     gateway = FakeAuthGateway();
+    google = FakeGoogleAccount();
     store = MemorySessionStore();
   });
 
@@ -129,13 +134,52 @@ void main() {
     });
   });
 
+  group('SignInWithGoogle', () {
+    test("échange l'ID token, ouvre la session et charge le compte", () async {
+      final session = AuthSession(store);
+
+      final result = await SignInWithGoogle(google, gateway, session)();
+
+      expect(result, isA<Ok<void, Object>>());
+      expect(gateway.calls, ['google id-token', 'me']);
+      expect(store.token, 'jeton-google');
+      expect((session.state as SignedIn).user?.id, 'u1');
+    });
+
+    test("choix du compte fermé : rien n'est appelé", () async {
+      google.idTokenResult = const Result.err(GoogleSignInCancelled());
+      final session = AuthSession(store);
+
+      final result = await SignInWithGoogle(google, gateway, session)();
+
+      expect(
+        (result as Err<void, Failure>).error,
+        isA<GoogleSignInCancelled>(),
+      );
+      expect(gateway.calls, isEmpty);
+      expect(session.state, isA<SignedOut>());
+    });
+
+    test('jeton refusé : pas de session, le compte est oublié', () async {
+      gateway.googleResult = const Result.err(FakeFailure('INVALID_TOKEN'));
+      final session = AuthSession(store);
+
+      final result = await SignInWithGoogle(google, gateway, session)();
+
+      expect((result as Err<void, Failure>).error.code, 'INVALID_TOKEN');
+      expect(google.calls, ['choose', 'forget']);
+      expect(store.token, isNull);
+    });
+  });
+
   test('SignOut prévient le serveur et efface toujours la session', () async {
     store.token = 't';
     final session = AuthSession(store, token: 't');
 
-    await SignOut(gateway, session)();
+    await SignOut(gateway, session, google)();
 
     expect(gateway.calls, ['sign-out']);
+    expect(google.calls, ['forget']);
     expect(session.state, isA<SignedOut>());
     expect(store.token, isNull);
   });

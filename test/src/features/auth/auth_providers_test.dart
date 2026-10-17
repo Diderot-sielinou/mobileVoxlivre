@@ -3,10 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:voxlivre/src/features/auth/application/auth_session.dart';
 import 'package:voxlivre/src/features/auth/application/request_code.dart';
 import 'package:voxlivre/src/features/auth/application/restore_session.dart';
+import 'package:voxlivre/src/features/auth/application/sign_in_with_google.dart';
 import 'package:voxlivre/src/features/auth/application/sign_out.dart';
 import 'package:voxlivre/src/features/auth/application/verify_code.dart';
 import 'package:voxlivre/src/features/auth/auth_providers.dart';
 import 'package:voxlivre/src/features/auth/infrastructure/better_auth_gateway.dart';
+import 'package:voxlivre/src/features/auth/infrastructure/sdk_google_account.dart';
 import 'package:voxlivre/src/shared/http/http_providers.dart';
 
 import '../../../helpers/fake_http.dart';
@@ -18,6 +20,9 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         authSessionProvider.overrideWithValue(session),
+        googleServerClientIdProvider.overrideWithValue(
+          'w.apps.googleusercontent.com',
+        ),
         apiClientProvider.overrideWithValue(
           FakeHttp((_) => reply(200, {})).client(),
         ),
@@ -30,6 +35,9 @@ void main() {
     expect(container.read(verifyCodeProvider), isA<VerifyCode>());
     expect(container.read(restoreSessionProvider), isA<RestoreSession>());
     expect(container.read(signOutProvider), isA<SignOut>());
+    expect(container.read(googleAccountProvider), isA<SdkGoogleAccount>());
+    expect(container.read(signInWithGoogleProvider), isA<SignInWithGoogle>());
+    expect(container.read(googleSignInEnabledProvider), isTrue);
 
     final states = <SessionState>[];
     container.listen(

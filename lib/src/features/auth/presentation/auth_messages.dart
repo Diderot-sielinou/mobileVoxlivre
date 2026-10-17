@@ -11,6 +11,11 @@ String authMessage(String code) => switch (code) {
   'OTP_RATE_LIMITED' || 'RATE_LIMITED' =>
     'Trop de demandes de code. Pour votre sécurité, réessayez dans '
         'quelques minutes.',
+  'GOOGLE_SIGN_IN_UNAVAILABLE' =>
+    'La connexion Google n’est pas disponible sur ce téléphone. '
+        'Utilisez un code par e-mail.',
+  'UNAUTHORIZED' ||
+  'INVALID_TOKEN' => 'Google n’a pas pu confirmer ce compte. Réessayez.',
   'NETWORK_UNAVAILABLE' =>
     'Pas de connexion internet. Vérifiez vos données mobiles ou le Wi-Fi.',
   'TIMEOUT' => 'Le réseau est trop lent. Réessayez dans un instant.',

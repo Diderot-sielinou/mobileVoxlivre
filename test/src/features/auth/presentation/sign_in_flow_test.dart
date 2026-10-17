@@ -4,9 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:voxlivre/src/core/result.dart';
 import 'package:voxlivre/src/features/auth/application/auth_session.dart';
 import 'package:voxlivre/src/features/auth/domain/current_user.dart';
+import 'package:voxlivre/src/features/auth/domain/google_account.dart';
 import 'package:voxlivre/src/features/auth/presentation/code_screen.dart';
 import 'package:voxlivre/src/features/auth/presentation/sign_in_screen.dart';
 import 'package:voxlivre/src/features/auth/presentation/widgets/code_input.dart';
+import 'package:voxlivre/src/shared/design/widgets/vox_banner.dart';
 
 import '../../../../helpers/app_harness.dart';
 import '../fakes.dart';
@@ -15,6 +17,14 @@ void main() {
   /// Remplit le champ visible (numéro ou adresse) et demande le code.
   Future<void> requestCode(WidgetTester tester, String input) async {
     await tester.enterText(find.byType(TextField), input);
+    // Sous le bouton Google : hors de l'écran de test.
+    await tester.dragUntilVisible(
+      find.text('Recevoir un code'),
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
+    await tester.ensureVisible(find.text('Recevoir un code'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Recevoir un code'));
     await tester.pumpAndSettle();
   }
@@ -35,6 +45,40 @@ void main() {
       find.text('Orange ou MTN, 9 chiffres commençant par 6'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('Google, recommandé : un compte choisi → Bibliothèque', (
+    tester,
+  ) async {
+    final h = await pumpVoxlivre(tester);
+    expect(find.textContaining('Recommandé'), findsOneWidget);
+
+    await tester.tap(find.text('Continuer avec Google'));
+    await tester.pumpAndSettle();
+
+    expect(h.google.calls, ['choose']);
+    expect(h.gateway.calls, ['google id-token', 'me']);
+    expect(h.store.token, 'jeton-google');
+    expect(find.widgetWithText(AppBar, 'Bibliothèque'), findsOneWidget);
+  });
+
+  testWidgets('Google : choix fermé → rien ; jeton refusé → bandeau', (
+    tester,
+  ) async {
+    final h = await pumpVoxlivre(tester);
+    h.google.idTokenResult = const Result.err(GoogleSignInCancelled());
+    await tester.tap(find.text('Continuer avec Google'));
+    await tester.pumpAndSettle();
+    expect(find.byType(VoxBanner), findsNothing);
+    expect(h.gateway.calls, isEmpty);
+
+    h.google.idTokenResult = const Result.ok('id-token');
+    h.gateway.googleResult = const Result.err(FakeFailure('INVALID_TOKEN'));
+    await tester.tap(find.text('Continuer avec Google'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Google n’a pas pu confirmer'), findsOneWidget);
+    expect(find.byType(SignInScreen), findsOneWidget);
+    expect(h.session.state, isA<SignedOut>());
   });
 
   testWidgets('un numéro invalide est refusé sans appel au réseau', (
@@ -231,6 +275,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(h.gateway.calls, ['sign-out']);
+    expect(h.google.calls, ['forget']);
     expect(h.store.token, isNull);
     expect(find.byType(SignInScreen), findsOneWidget);
   });
@@ -254,7 +299,11 @@ void main() {
     tester,
   ) async {
     final h = await pumpVoxlivre(tester);
-    await tester.ensureVisible(find.text('Confidentialité'));
+    await tester.dragUntilVisible(
+      find.text('Confidentialité'),
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Conditions d’utilisation'));
     await tester.tap(find.text('Confidentialité'));

@@ -54,6 +54,9 @@ Future<void> bootstrap() async {
     overrides: [
       appConfigProvider.overrideWithValue(config),
       authSessionProvider.overrideWithValue(session),
+      googleServerClientIdProvider.overrideWithValue(
+        config.googleServerClientId,
+      ),
       onboardingStoreProvider.overrideWithValue(onboarding),
       deviceSettingsStoreProvider.overrideWithValue(settings),
       apiClientProvider.overrideWithValue(

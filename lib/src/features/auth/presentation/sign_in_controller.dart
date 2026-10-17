@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxlivre/src/core/result.dart';
 import 'package:voxlivre/src/features/auth/auth_providers.dart';
 import 'package:voxlivre/src/features/auth/domain/email_address.dart';
+import 'package:voxlivre/src/features/auth/domain/google_account.dart';
 import 'package:voxlivre/src/features/auth/domain/phone_number.dart';
 import 'package:voxlivre/src/features/auth/domain/sign_in_target.dart';
 import 'package:voxlivre/src/shared/time/clock_providers.dart';
@@ -77,6 +78,23 @@ final class SignInController extends Notifier<SignInState> {
       case Ok(value: final SignInTarget target):
         return _request(target);
     }
+  }
+
+  /// Connexion par Google ; en cas de succès, le routeur quitte la
+  /// connexion. Fermer le choix du compte n'est pas une erreur.
+  Future<void> signInWithGoogle() async {
+    if (state.busy) return;
+    state = state.copyWith(busy: true, errorCode: () => null);
+    final result = await ref.read(signInWithGoogleProvider)();
+    if (!ref.mounted) return;
+    state = switch (result) {
+      Ok() => const SignInState(),
+      Err(error: GoogleSignInCancelled()) => state.copyWith(busy: false),
+      Err(:final error) => state.copyWith(
+        busy: false,
+        errorCode: () => error.code,
+      ),
+    };
   }
 
   /// Redemande un code pour la même destination.

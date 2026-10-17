@@ -4,10 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:voxlivre/src/features/auth/application/auth_session.dart';
 import 'package:voxlivre/src/features/auth/application/request_code.dart';
 import 'package:voxlivre/src/features/auth/application/restore_session.dart';
+import 'package:voxlivre/src/features/auth/application/sign_in_with_google.dart';
 import 'package:voxlivre/src/features/auth/application/sign_out.dart';
 import 'package:voxlivre/src/features/auth/application/verify_code.dart';
 import 'package:voxlivre/src/features/auth/domain/auth_gateway.dart';
+import 'package:voxlivre/src/features/auth/domain/google_account.dart';
 import 'package:voxlivre/src/features/auth/infrastructure/better_auth_gateway.dart';
+import 'package:voxlivre/src/features/auth/infrastructure/sdk_google_account.dart';
 import 'package:voxlivre/src/shared/http/http_providers.dart';
 
 /// Composition de l'auth (ADR-0002) : ports → adaptateurs, cas d'usage.
@@ -37,6 +40,28 @@ final authGatewayProvider = Provider<AuthGateway>(
   (ref) => BetterAuthGateway(ref.watch(apiClientProvider)),
 );
 
+/// Client OAuth Web de Google, fourni au démarrage depuis la configuration
+/// (ADR-0015) ; `null` : pas de connexion Google.
+final googleServerClientIdProvider = Provider<String?>((ref) => null);
+
+/// Compte Google du téléphone (ADR-0015).
+final googleAccountProvider = Provider<GoogleAccount>(
+  (ref) => SdkGoogleAccount(ref.watch(googleServerClientIdProvider)),
+);
+
+/// La connexion Google est proposée seulement si l'app connaît son client.
+final googleSignInEnabledProvider = Provider<bool>(
+  (ref) => ref.watch(googleServerClientIdProvider) != null,
+);
+
+final signInWithGoogleProvider = Provider<SignInWithGoogle>(
+  (ref) => SignInWithGoogle(
+    ref.watch(googleAccountProvider),
+    ref.watch(authGatewayProvider),
+    ref.watch(authSessionProvider),
+  ),
+);
+
 final requestCodeProvider = Provider<RequestCode>(
   (ref) => RequestCode(ref.watch(authGatewayProvider)),
 );
@@ -56,6 +81,9 @@ final restoreSessionProvider = Provider<RestoreSession>(
 );
 
 final signOutProvider = Provider<SignOut>(
-  (ref) =>
-      SignOut(ref.watch(authGatewayProvider), ref.watch(authSessionProvider)),
+  (ref) => SignOut(
+    ref.watch(authGatewayProvider),
+    ref.watch(authSessionProvider),
+    ref.watch(googleAccountProvider),
+  ),
 );

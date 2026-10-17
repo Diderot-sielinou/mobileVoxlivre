@@ -2,6 +2,7 @@ import 'package:voxlivre/src/core/failure.dart';
 import 'package:voxlivre/src/core/result.dart';
 import 'package:voxlivre/src/features/auth/domain/auth_gateway.dart';
 import 'package:voxlivre/src/features/auth/domain/current_user.dart';
+import 'package:voxlivre/src/features/auth/domain/google_account.dart';
 import 'package:voxlivre/src/features/auth/domain/session_store.dart';
 import 'package:voxlivre/src/features/auth/domain/sign_in_target.dart';
 
@@ -30,6 +31,7 @@ final class MemorySessionStore implements SessionStore {
 final class FakeAuthGateway implements AuthGateway {
   Result<void, Failure> requestResult = const Result.ok(null);
   Result<String, Failure> verifyResult = const Result.ok('jeton-signé');
+  Result<String, Failure> googleResult = const Result.ok('jeton-google');
   Result<CurrentUser, Failure> userResult = const Result.ok(
     CurrentUser(id: 'u1', email: 'lecteur@mail.com'),
   );
@@ -51,6 +53,12 @@ final class FakeAuthGateway implements AuthGateway {
   }
 
   @override
+  Future<Result<String, Failure>> signInWithGoogle(String idToken) async {
+    calls.add('google $idToken');
+    return googleResult;
+  }
+
+  @override
   Future<Result<CurrentUser, Failure>> currentUser() async {
     calls.add('me');
     return userResult;
@@ -61,4 +69,19 @@ final class FakeAuthGateway implements AuthGateway {
     calls.add('sign-out');
     return const Result.ok(null);
   }
+}
+
+/// Compte Google scripté : l'ID token rendu est réglable, chaque appel noté.
+final class FakeGoogleAccount implements GoogleAccount {
+  Result<String, Failure> idTokenResult = const Result.ok('id-token');
+  final calls = <String>[];
+
+  @override
+  Future<Result<String, Failure>> idToken() async {
+    calls.add('choose');
+    return idTokenResult;
+  }
+
+  @override
+  Future<void> forget() async => calls.add('forget');
 }

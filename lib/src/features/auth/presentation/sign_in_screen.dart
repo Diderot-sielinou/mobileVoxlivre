@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:voxlivre/src/features/auth/auth_providers.dart';
 import 'package:voxlivre/src/features/auth/presentation/auth_messages.dart';
 import 'package:voxlivre/src/features/auth/presentation/auth_routes.dart';
 import 'package:voxlivre/src/features/auth/presentation/sign_in_controller.dart';
@@ -27,6 +28,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _phone = TextEditingController();
   final _email = TextEditingController();
 
+  /// La connexion en cours est celle de Google (pour son indicateur).
+  bool _google = false;
+
   @override
   void dispose() {
     _phone.dispose();
@@ -45,9 +49,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    setState(() => _google = true);
+    await ref.read(signInControllerProvider.notifier).signInWithGoogle();
+    if (mounted) setState(() => _google = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(signInControllerProvider);
+    final googleEnabled = ref.watch(googleSignInEnabledProvider);
     final controller = ref.read(signInControllerProvider.notifier);
     final text = Theme.of(context).textTheme;
     final colors = context.vox;
@@ -83,6 +94,23 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 style: text.bodyLarge?.copyWith(color: colors.textSecondary),
               ),
               const SizedBox(height: VoxSpacing.lg),
+              if (googleEnabled) ...[
+                _GoogleButton(
+                  loading: state.busy && _google,
+                  onPressed: state.busy ? null : _signInWithGoogle,
+                ),
+                const SizedBox(height: VoxSpacing.sm),
+                // Version d'essai : SES en bac à sable, SMS pas encore ouvert.
+                Text(
+                  'Recommandé : la réception d’un code par SMS ou par e-mail '
+                  'n’est pas encore ouverte à tous.',
+                  style: text.bodySmall?.copyWith(color: colors.textSecondary),
+                ),
+                const SizedBox(height: VoxSpacing.lg),
+                const _OrDivider(),
+                const SizedBox(height: VoxSpacing.lg),
+              ],
+              // Près des actions : visible même sur un petit écran.
               AnimatedSwitcher(
                 duration: swap,
                 child: screenError == null
@@ -138,7 +166,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               VoxPrimaryButton(
                 label: 'Recevoir un code',
                 icon: Icons.arrow_forward,
-                loading: state.busy,
+                loading: state.busy && !_google,
                 onPressed: _submit,
               ),
               const SizedBox(height: VoxSpacing.xl),
@@ -156,6 +184,84 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// « Continuer avec Google », avec le logo officiel (ADR-0015).
+class _GoogleButton extends StatelessWidget {
+  const _GoogleButton({required this.loading, required this.onPressed});
+
+  final bool loading;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vox;
+    const label = 'Continuer avec Google';
+    return Semantics(
+      button: true,
+      enabled: onPressed != null,
+      label: loading ? '$label, en cours' : label,
+      excludeSemantics: true,
+      child: OutlinedButton(
+        onPressed: loading ? null : onPressed,
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(VoxSizes.primaryButtonHeight),
+          foregroundColor: colors.text,
+          side: BorderSide(color: colors.border),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(VoxRadius.chip),
+          ),
+        ),
+        child: loading
+            ? SizedBox.square(
+                dimension: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: colors.text,
+                ),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset('assets/images/google_g.png', width: 20),
+                  const SizedBox(width: VoxSpacing.sm + VoxSpacing.xs),
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: Theme.of(context).textTheme.labelLarge,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+/// Séparateur « ou avec un code ».
+class _OrDivider extends StatelessWidget {
+  const _OrDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vox;
+    return Row(
+      children: [
+        Expanded(child: Divider(color: colors.border)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: VoxSpacing.md),
+          child: Text(
+            'ou avec un code',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+          ),
+        ),
+        Expanded(child: Divider(color: colors.border)),
+      ],
     );
   }
 }

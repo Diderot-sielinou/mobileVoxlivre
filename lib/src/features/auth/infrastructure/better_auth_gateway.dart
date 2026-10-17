@@ -47,6 +47,29 @@ final class BetterAuthGateway implements AuthGateway {
         decode: (r) => r.header(tokenHeader),
       ),
     };
+    return _sessionToken(request);
+  }
+
+  /// Fournisseur `google` de better-auth, flux par ID token (ADR-0030 du
+  /// backend) : même jeton signé en en-tête que pour un code.
+  @override
+  Future<Result<String, Failure>> signInWithGoogle(String idToken) =>
+      _sessionToken(
+        _api.post(
+          '/api/auth/sign-in/social',
+          body: {
+            'provider': 'google',
+            'idToken': {'token': idToken},
+          },
+          decode: (r) => r.header(tokenHeader),
+        ),
+      );
+
+  /// Jeton de session lu dans [tokenHeader] ; son absence est une réponse
+  /// inattendue.
+  Future<Result<String, Failure>> _sessionToken(
+    Future<Result<String?, Failure>> request,
+  ) {
     return request.then(
       (result) => switch (result) {
         Ok(value: final token?) when token.isNotEmpty => Result.ok(token),
